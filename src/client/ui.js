@@ -51,9 +51,9 @@ export function icon(name) {
 
 const M = {
 	ko: {
-		"title.home": "anyq: 발표 자료에서 답을 찾아 두는 Q&A",
-		"title.room": "anyq 질문 방 {0}",
-		"logo.label": "anyq 처음으로",
+		"title.home": "anyQ: 발표 자료에서 답을 찾아 두는 Q&A",
+		"title.room": "anyQ 질문 방 {0}",
+		"logo.label": "anyQ 처음으로",
 		"nav.wall": "예시",
 		"nav.draft": "초안",
 		"nav.flow": "순서",
@@ -187,9 +187,9 @@ const M = {
 		"act.unhide": "되돌리기",
 	},
 	en: {
-		"title.home": "anyq: live Q&A with answers drafted from your slides",
-		"title.room": "anyq room {0}",
-		"logo.label": "anyq home",
+		"title.home": "anyQ: live Q&A with answers drafted from your slides",
+		"title.room": "anyQ room {0}",
+		"logo.label": "anyQ home",
 		"nav.wall": "Demo",
 		"nav.draft": "Drafts",
 		"nav.flow": "Flow",
