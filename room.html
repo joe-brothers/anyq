@@ -1,62 +1,110 @@
 <!doctype html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>anyq 질문 방</title>
-<meta name="robots" content="noindex">
-<link rel="icon" href="data:,">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css">
-<link rel="stylesheet" href="/styles.css">
-<link rel="stylesheet" href="/room.css">
-<script type="module" src="/src/client/room.js"></script>
-</head>
-<body class="room">
-<header class="top">
-  <a class="logo" href="/" aria-label="anyq 처음으로">anyq</a>
-  <p class="conn" id="conn" role="status">방에 연결하는 중입니다.</p>
-</header>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>anyq 질문 방</title>
+		<meta name="robots" content="noindex" />
+		<link
+			rel="icon"
+			href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1512'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='800' font-size='24' fill='%23f5f0e8'%3Eq%3C/text%3E%3C/svg%3E"
+		/>
+		<script>
+			try {
+				document.documentElement.dataset.theme =
+					localStorage.getItem("anyq-theme") ||
+					(matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+			} catch (e) {}
+		</script>
+		<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css"
+		/>
+		<link rel="stylesheet" href="/styles.css" />
+		<link rel="stylesheet" href="/room.css" />
+		<script type="module" src="/src/client/room.js"></script>
+	</head>
+	<body class="room">
+		<header class="top">
+			<a class="logo" href="/" data-i18n-label="logo.label" aria-label="anyq 처음으로">anyq</a>
+			<div class="tools">
+				<p class="conn" id="conn" role="status"></p>
+				<button class="btn tool" type="button" id="lang" hidden></button>
+				<button class="btn tool" type="button" id="theme" hidden></button>
+			</div>
+		</header>
 
-<main>
-  <h1 class="sr" id="title">질문 방</h1>
+		<main>
+			<h1 class="sr" id="title" data-i18n="room.h">질문 방</h1>
 
-  <section class="share" id="share" hidden aria-labelledby="share-h">
-    <h2 id="share-h">청중에게 보여 줄 것</h2>
-    <p>청중 링크 <a id="link-aud" href="#"></a> <button class="btn" type="button" id="copy">링크 복사</button></p>
-    <p>프로젝터 화면 <a id="link-screen" href="#" target="_blank" rel="noopener">새 창으로 열기</a></p>
-    <p class="note">지금 보는 주소는 발표자만 아는 주소입니다. 공유하지 마세요.</p>
-  </section>
+			<div class="panels" id="panels" hidden>
+				<section class="panel" aria-labelledby="share-h">
+					<h2 id="share-h" data-i18n="share.h">공유</h2>
+					<div class="row">
+						<a class="url" id="link-aud" href="#"></a>
+						<button class="btn" type="button" id="copy"></button>
+						<a class="btn" id="link-screen" href="#" target="_blank" rel="noopener"
+							><span data-icon="screen"></span
+							><span data-i18n="share.screen">프로젝터 화면</span></a
+						>
+					</div>
+					<p class="note">
+						<span data-icon="lock"></span
+						><span data-i18n="share.note"
+							>이 페이지 주소는 공유하지 마세요. 발표자 권한이 들어 있습니다.</span
+						>
+					</p>
+				</section>
 
-  <section class="share" id="materials" hidden aria-labelledby="mat-h">
-    <h2 id="mat-h">발표 자료</h2>
-    <p><label class="btn file-btn" for="file" id="file-label">발표 자료 올리기</label><input class="sr" id="file" type="file" accept=".pdf,.txt,.md"> <span class="note">PDF, TXT, MD · 10MiB 이하</span></p>
-    <p class="err" id="file-err" role="alert"></p>
-    <ul class="files" id="file-list"></ul>
-    <p class="note" id="file-note" role="status"></p>
-  </section>
+				<section class="panel" aria-labelledby="mat-h">
+					<h2 id="mat-h" data-i18n="mat.h">자료</h2>
+					<div class="row">
+						<label class="btn" for="file" id="file-label"></label
+						><input class="sr" id="file" type="file" accept=".pdf,.txt,.md" />
+						<span class="note" data-i18n="mat.hint">PDF · TXT · MD, 10MiB까지</span>
+					</div>
+					<p class="err" id="file-err" role="alert"></p>
+					<ul class="files" id="file-list"></ul>
+					<p class="note" id="file-note" role="status"></p>
+				</section>
+			</div>
 
-  <div class="stage">
-    <div class="list">
-      <p class="empty" id="msg" hidden></p>
-      <ol class="qs" id="qs" aria-labelledby="title"></ol>
-    </div>
-    <aside class="join" id="join" hidden aria-label="참여 방법">
-      <div class="qr" id="qr"></div>
-      <p>카메라로 찍어 질문하세요</p>
-      <p class="join-url" id="join-url"></p>
-    </aside>
-  </div>
+			<p class="total" id="total" hidden></p>
+			<div class="stage">
+				<div class="list">
+					<p class="empty" id="msg" hidden></p>
+					<ol class="qs" id="qs" aria-labelledby="title"></ol>
+					<details class="hidden-box" id="hidden" hidden>
+						<summary id="hidden-sum"></summary>
+						<ol class="qs" id="hidden-qs"></ol>
+					</details>
+				</div>
+				<aside class="join" id="join" hidden data-i18n-label="join" aria-label="QR로 질문하기">
+					<div class="qr" id="qr"></div>
+					<p data-i18n="join">QR로 질문하기</p>
+					<p class="join-url" id="join-url"></p>
+				</aside>
+			</div>
 
-  <form class="ask dock" id="ask" novalidate hidden>
-    <label for="q">질문 적기</label>
-    <div class="ask-row">
-      <input id="q" name="q" type="text" maxlength="200" autocomplete="off" placeholder="발표자에게 묻고 싶은 것" aria-describedby="q-err">
-      <button class="btn primary" type="submit">질문 올리기</button>
-    </div>
-    <p class="err" id="q-err" role="alert"></p>
-  </form>
-  <p class="sr" id="live" aria-live="polite"></p>
-</main>
-</body>
+			<form class="ask dock" id="ask" novalidate hidden>
+				<label for="q" data-i18n="ask.label">질문</label>
+				<div class="ask-row">
+					<input
+						id="q"
+						name="q"
+						type="text"
+						maxlength="200"
+						autocomplete="off"
+						data-i18n-ph="ask.ph"
+						placeholder="발표자에게 묻고 싶은 것"
+						aria-describedby="q-err"
+					/>
+					<button class="btn primary" type="submit" data-i18n="ask.submit">올리기</button>
+				</div>
+				<p class="err" id="q-err" role="alert"></p>
+			</form>
+			<p class="sr" id="live" aria-live="polite"></p>
+		</main>
+	</body>
 </html>

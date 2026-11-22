@@ -1,135 +1,195 @@
 <!doctype html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>anyq: 발표 자료로 먼저 답해 두는 Q&amp;A</title>
-<meta name="description" content="청중은 QR로 들어와 묻고 추천합니다. anyq는 발표 자료에서 답변 초안과 근거를 찾아 두고, 발표자가 승인한 답만 공개합니다.">
-<link rel="icon" href="data:,">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css">
-<link rel="stylesheet" href="/styles.css">
-<script src="/app.js" defer></script>
-</head>
-<body>
-<header class="top">
-  <a class="logo" href="#top" aria-label="anyq 처음으로">anyq</a>
-  <nav aria-label="페이지 안 이동">
-    <a href="#wall">예시 방</a>
-    <a href="#draft">답변 초안</a>
-    <a href="#flow">진행 순서</a>
-    <a href="#stack">구성</a>
-  </nav>
-</header>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title data-i18n="title.home">anyq: 발표 자료에서 답을 찾아 두는 Q&amp;A</title>
+		<meta
+			name="description"
+			content="청중은 QR로 묻고 추천합니다. 발표 자료에서 찾은 답변 초안과 근거는 발표자만 보고, 승인한 답만 공개됩니다."
+		/>
+		<link
+			rel="icon"
+			href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1512'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='800' font-size='24' fill='%23f5f0e8'%3Eq%3C/text%3E%3C/svg%3E"
+		/>
+		<script>
+			try {
+				document.documentElement.dataset.theme =
+					localStorage.getItem("anyq-theme") ||
+					(matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+			} catch (e) {}
+		</script>
+		<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css"
+		/>
+		<link rel="stylesheet" href="/styles.css" />
+		<script type="module" src="/src/client/home.js"></script>
+	</head>
+	<body>
+		<header class="top">
+			<a class="logo" href="#top" data-i18n-label="logo.label" aria-label="anyq 처음으로">anyq</a>
+			<nav aria-label="페이지 안 이동">
+				<a href="#wall" data-i18n="nav.wall">예시</a>
+				<a href="#draft" data-i18n="nav.draft">초안</a>
+				<a href="#flow" data-i18n="nav.flow">순서</a>
+				<a href="#stack" data-i18n="nav.stack">구성</a>
+			</nav>
+			<div class="tools">
+				<button class="btn tool" type="button" id="lang" hidden></button>
+				<button class="btn tool" type="button" id="theme" hidden></button>
+			</div>
+		</header>
 
-<main id="top">
-  <section class="hero">
-    <h1>질문에는<br>발표 자료로<br>먼저 답해 둡니다.</h1>
-    <div class="hero-side">
-      <p>청중은 QR로 들어와 묻고 추천합니다. anyq는 발표자가 올린 자료에서 답변 초안과 근거를 찾아 둡니다. 발표자가 승인한 답만 청중에게 보입니다.</p>
-      <div class="hero-acts">
-        <button class="btn primary" type="button" id="create">방 만들기</button>
-        <a class="btn" href="#wall">예시 방에서 추천 눌러 보기</a>
-      </div>
-      <div id="ts"></div>
-      <p class="err" id="create-err" role="alert"></p>
-      <p class="note">방을 만들면 질문, 추천, 자료 올리기, 답변 초안을 바로 쓸 수 있습니다. 아래 화면은 이 페이지 안에서만 움직이는 예시입니다.</p>
-    </div>
-  </section>
+		<main id="top">
+			<section class="hero">
+				<h1 data-i18n="h1">질문이 오면 발표 자료에서 답을 찾아 둡니다.</h1>
+				<div class="hero-side">
+					<p data-i18n="hero.p">
+						청중은 QR로 묻고 추천합니다. 초안과 근거는 발표자만 보고, 승인한 답만 공개됩니다.
+					</p>
+					<div class="hero-acts">
+						<button class="btn primary" type="button" id="create">방 만들기</button>
+						<a class="btn" href="#wall" data-i18n="hero.demo">예시 보기</a>
+					</div>
+					<div id="ts"></div>
+					<p class="err" id="create-err" role="alert"></p>
+					<p class="note" data-i18n="hero.note">계정 필요 없음</p>
+				</div>
+			</section>
 
-  <section id="wall" aria-labelledby="wall-h">
-    <div class="sec-head">
-      <h2 id="wall-h">추천을 받으면 글자가 커집니다</h2>
-      <p>프로젝터에 띄우는 화면입니다. 예시 질문이고, 추천 수는 직접 눌러 바꿀 수 있습니다.</p>
-    </div>
-    <ol class="qs" id="qs"></ol>
-    <p class="empty" id="qs-empty" hidden>아직 질문이 없습니다. 아래 칸에 첫 질문을 적어 보세요.</p>
-    <form class="ask" id="ask" novalidate>
-      <label for="q">질문 적기</label>
-      <div class="ask-row">
-        <input id="q" name="q" type="text" maxlength="120" autocomplete="off" placeholder="발표자에게 묻고 싶은 것" aria-describedby="q-err">
-        <button class="btn primary" type="submit">질문 올리기</button>
-      </div>
-      <p class="err" id="q-err" role="alert"></p>
-    </form>
-    <p class="sr" id="live" aria-live="polite"></p>
-  </section>
+			<section id="wall" aria-labelledby="wall-h">
+				<div class="sec-head">
+					<h2 id="wall-h" data-i18n="wall.h">추천이 많을수록 크게</h2>
+					<p data-i18n="wall.p">프로젝터 화면 예시. 추천을 눌러 보세요.</p>
+				</div>
+				<ol class="qs" id="qs"></ol>
+				<p class="empty" id="qs-empty" data-i18n="q.empty.aud" hidden>첫 질문을 올려 보세요.</p>
+				<form class="ask" id="ask" novalidate>
+					<label for="q" data-i18n="ask.label">질문</label>
+					<div class="ask-row">
+						<input
+							id="q"
+							name="q"
+							type="text"
+							maxlength="120"
+							autocomplete="off"
+							data-i18n-ph="ask.ph"
+							placeholder="발표자에게 묻고 싶은 것"
+							aria-describedby="q-err"
+						/>
+						<button class="btn primary" type="submit" data-i18n="ask.submit">올리기</button>
+					</div>
+					<p class="err" id="q-err" role="alert"></p>
+				</form>
+				<p class="sr" id="live" aria-live="polite"></p>
+			</section>
 
-  <section id="draft" aria-labelledby="draft-h">
-    <div class="sec-head">
-      <h2 id="draft-h">초안 옆에 근거가 붙습니다</h2>
-      <p>발표자 화면입니다. 예시의 자료는 이 프로젝트의 기획 문서(handoff.md)이고, 초안 문장은 사람이 쓴 예시입니다.</p>
-    </div>
+			<section id="draft" aria-labelledby="draft-h">
+				<div class="sec-head">
+					<h2 id="draft-h" data-i18n="draft.h">초안 옆에 근거</h2>
+					<p data-i18n="draft.p">발표자 화면 예시. 자료는 이 프로젝트의 기획 문서(handoff.md).</p>
+				</div>
 
-    <article class="pair" id="pair-1" data-state="draft">
-      <div class="answer">
-        <p class="q">PDF는 몇 MB까지 올릴 수 있나요?</p>
-        <p class="state" id="state-1">초안 · 발표자만 봅니다</p>
-        <p class="a">OCR을 쓰면 10MiB, 쓰지 않으면 4MiB까지 올릴 수 있습니다.</p>
-        <button class="btn" type="button" id="approve" aria-describedby="state-1">승인하고 공개</button>
-      </div>
-      <aside class="source" aria-label="근거 자료">
-        <p class="src-label">근거 · handoff.md, 3. 설계 초안</p>
-        <blockquote>파일 크기 한도: PDF는 OCR 사용 시 10MiB, 미사용 시 4MiB. 일반 텍스트류 10MiB.</blockquote>
-      </aside>
-    </article>
+				<article class="pair" id="pair-1" data-state="draft">
+					<div class="answer">
+						<p class="q" data-i18n="seed.1">PDF는 몇 MB까지 올릴 수 있나요?</p>
+						<p class="state" id="state-1"></p>
+						<p class="a" data-i18n="demo.a1">
+							OCR을 쓰면 10MiB, 쓰지 않으면 4MiB까지 올릴 수 있습니다.
+						</p>
+						<button class="btn" type="button" id="approve" aria-describedby="state-1"></button>
+					</div>
+					<aside class="source" data-i18n-label="src.label" aria-label="근거 자료">
+						<p class="src-label">
+							<span data-icon="file"></span>
+							<span data-i18n="demo.src1">handoff.md, 3. 설계 초안</span>
+						</p>
+						<blockquote data-i18n="demo.quote1">
+							파일 크기 한도: PDF는 OCR 사용 시 10MiB, 미사용 시 4MiB. 일반 텍스트류 10MiB.
+						</blockquote>
+					</aside>
+				</article>
 
-    <article class="pair" data-state="none">
-      <div class="answer">
-        <p class="q">무료 플랜으로 몇 명까지 접속할 수 있나요?</p>
-        <p class="state">초안 없음 · 발표자가 직접 답합니다</p>
-      </div>
-      <aside class="source missing" aria-label="근거 자료">
-        <p class="src-label">자료에 없음</p>
-        <p>올린 자료에서 답을 찾지 못했습니다. 지어내지 않고 발표자에게 넘깁니다.</p>
-      </aside>
-    </article>
-  </section>
+				<article class="pair" data-state="none">
+					<div class="answer">
+						<p class="q" data-i18n="seed.4">무료 플랜으로 몇 명까지 접속할 수 있나요?</p>
+						<p class="state" data-i18n="st.none">초안 없음</p>
+					</div>
+					<aside class="source missing" data-i18n-label="src.label" aria-label="근거 자료">
+						<p class="src-label" data-i18n="src.none">자료에 없음</p>
+					</aside>
+				</article>
+			</section>
 
-  <section id="flow" aria-labelledby="flow-h">
-    <div class="sec-head">
-      <h2 id="flow-h">발표 한 번이 지나가는 순서</h2>
-    </div>
-    <div class="lanes-head" aria-hidden="true"><span>발표자</span><span>anyq</span><span>청중</span></div>
-    <ol class="lanes">
-      <li data-who="p"><b>발표자</b> 방을 만듭니다. 발표자용 비밀 링크와 청중용 QR 링크가 나옵니다.</li>
-      <li data-who="p"><b>발표자</b> 발표 자료를 올립니다.</li>
-      <li data-who="a"><b>anyq</b> 자료를 색인합니다. 색인이 끝나기 전에는 초안이 나오지 않습니다.</li>
-      <li data-who="c"><b>청중</b> QR로 들어와 질문하고 다른 질문을 추천합니다. 계정은 필요 없습니다.</li>
-      <li data-who="a"><b>anyq</b> 질문마다 자료에서 답변 초안과 근거를 찾습니다. 자료에 없으면 없다고 표시합니다.</li>
-      <li data-who="p"><b>발표자</b> 초안을 승인하거나 고쳐서 공개합니다. 승인 전에는 청중에게 보이지 않습니다.</li>
-    </ol>
-  </section>
+			<section id="flow" aria-labelledby="flow-h">
+				<div class="sec-head">
+					<h2 id="flow-h" data-i18n="flow.h">진행 순서</h2>
+				</div>
+				<div class="lanes-head" aria-hidden="true">
+					<span data-i18n="who.p">발표자</span><span>anyq</span><span data-i18n="who.c">청중</span>
+				</div>
+				<ol class="lanes">
+					<li data-who="p">
+						<b data-i18n="who.p">발표자</b
+						><span data-i18n="flow.1">방을 만들고 QR을 띄웁니다.</span>
+					</li>
+					<li data-who="p">
+						<b data-i18n="who.p">발표자</b><span data-i18n="flow.2">발표 자료를 올립니다.</span>
+					</li>
+					<li data-who="a"><b>anyq</b><span data-i18n="flow.3">자료를 색인합니다.</span></li>
+					<li data-who="c">
+						<b data-i18n="who.c">청중</b
+						><span data-i18n="flow.4">QR로 들어와 묻고 추천합니다. 계정 없이.</span>
+					</li>
+					<li data-who="a">
+						<b>anyq</b
+						><span data-i18n="flow.5"
+							>질문마다 초안과 근거를 찾습니다. 자료에 없으면 근거 칸이 빕니다.</span
+						>
+					</li>
+					<li data-who="p">
+						<b data-i18n="who.p">발표자</b
+						><span data-i18n="flow.6">초안을 승인하거나 고쳐서 공개합니다.</span>
+					</li>
+				</ol>
+			</section>
 
-  <section id="screens" aria-labelledby="screens-h">
-    <div class="sec-head">
-      <h2 id="screens-h">실제 화면</h2>
-      <p>구현이 끝나면 스크린샷으로 바꿉니다.</p>
-    </div>
-    <div class="shots">
-      <figure class="shot wide"><div class="ph" style="aspect-ratio:16/9">[스크린샷] 프로젝터 화면</div><figcaption>프로젝터: 질문과 QR</figcaption></figure>
-      <figure class="shot desk"><div class="ph" style="aspect-ratio:16/10">[스크린샷] 발표자 화면</div><figcaption>발표자: 질문, 초안, 근거</figcaption></figure>
-      <figure class="shot phone"><div class="ph" style="aspect-ratio:9/16">[스크린샷] 청중 화면</div><figcaption>청중: 질문과 추천</figcaption></figure>
-    </div>
-  </section>
+			<section id="stack" aria-labelledby="stack-h">
+				<div class="sec-head">
+					<h2 id="stack-h" data-i18n="stack.h">내 Cloudflare 계정에 배포</h2>
+					<p data-i18n="stack.p">오픈소스 공개 예정</p>
+				</div>
+				<dl class="stack">
+					<div>
+						<dt>Workers</dt>
+						<dd data-i18n="stack.workers">요청 처리, 화면 제공</dd>
+					</div>
+					<div>
+						<dt>Durable Objects</dt>
+						<dd data-i18n="stack.do">방 상태와 기록(SQLite), 실시간 전달(WebSocket)</dd>
+					</div>
+					<div>
+						<dt>AI Search</dt>
+						<dd data-i18n="stack.search">방마다 인스턴스 하나. 자료 보관, 색인, 검색</dd>
+					</div>
+					<div>
+						<dt>Workers AI</dt>
+						<dd data-i18n="stack.ai">검색된 자료로 초안 작성</dd>
+					</div>
+					<div>
+						<dt>Turnstile</dt>
+						<dd data-i18n="stack.ts">방 만들기 전 사람 확인</dd>
+					</div>
+				</dl>
+			</section>
+		</main>
 
-  <section id="stack" aria-labelledby="stack-h">
-    <div class="sec-head">
-      <h2 id="stack-h">본인 Cloudflare 계정에 띄웁니다</h2>
-      <p>오픈소스로 공개할 예정입니다.</p>
-    </div>
-    <dl class="stack">
-      <div><dt>Workers</dt><dd>요청 처리와 화면 제공</dd></div>
-      <div><dt>Durable Objects</dt><dd>방 하나의 상태와 기록(SQLite), 실시간 질문과 추천(WebSocket)</dd></div>
-      <div><dt>AI Search</dt><dd>방마다 인스턴스 하나. 자료 보관, 색인, 검색</dd></div>
-      <div><dt>Workers AI</dt><dd>검색된 자료로 답변 초안 작성</dd></div>
-      <div><dt>Turnstile</dt><dd>방 만들기 전 사람 확인</dd></div>
-    </dl>
-  </section>
-</main>
-
-<footer>
-  <p>Cloudflare Developer Day Seoul 2026 Use Case 공모전 출품 준비 중.</p>
-</footer>
-</body>
+		<footer>
+			<p data-i18n="footer">
+				Cloudflare Developer Day Seoul 2026 Use Case 공모전 출품 준비 중 · MIT
+			</p>
+		</footer>
+	</body>
 </html>

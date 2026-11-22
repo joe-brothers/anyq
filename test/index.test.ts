@@ -1,8 +1,20 @@
 import { SELF } from "cloudflare:test";
-import { expect, it } from "vite-plus/test";
+import { env } from "cloudflare:workers";
+import { beforeEach, expect, it, vi } from "vite-plus/test";
 import type { ServerMsg } from "../src/protocol.ts";
 
 const origin = "https://example.com";
+
+// 임베딩은 네트워크 없이 흉내 낸다.
+beforeEach(() => {
+	// PDF가 들어간 질문끼리만 같은 벡터를 준다.
+	vi.spyOn(env.AI, "run").mockImplementation((async (
+		_model: string,
+		input: { text: string[] },
+	) => ({
+		data: [input.text[0].includes("PDF") ? [1, 0] : [0, 1]],
+	})) as never);
+});
 
 async function createRoom() {
 	const res = await SELF.fetch(origin + "/api/rooms", { method: "POST" });
@@ -103,4 +115,32 @@ it("발표자가 승인한 답만 청중에게 보인다", async () => {
 
 	host.send({ t: "unapprove", id: q.id });
 	expect((await a.next("q")).q.answer).toBeUndefined();
+});
+
+it("비슷한 질문을 묶고, 발표자가 분리하고 숨김을 되돌린다", async () => {
+	const { id, token } = await createRoom();
+	const a = await connect(id, "voter-aaaa");
+	const b = await connect(id, "voter-bbbb");
+	const host = await connect(id, "voter-host", token);
+	if (!a.ws || !b.ws || !host.ws) throw new Error("연결 실패");
+
+	a.send({ t: "ask", text: "PDF는 몇 MB까지 되나요?" });
+	const first = (await host.next("q")).q;
+	b.send({ t: "ask", text: "PDF 용량 제한이 있나요?" });
+	const second = (await host.next("q")).q;
+	expect((await host.next("del")).id).toBe(second.id);
+	expect((await host.next("q")).q).toMatchObject({
+		id: first.id,
+		votes: 1,
+		similar: [{ id: second.id, text: "PDF 용량 제한이 있나요?" }],
+	});
+
+	host.send({ t: "split", id: second.id });
+	expect((await host.next("q")).q).toMatchObject({ id: second.id, votes: 0 });
+	expect((await host.next("q")).q.similar).toBeUndefined();
+
+	host.send({ t: "set", id: second.id, status: "hidden" });
+	expect((await host.next("q")).q).toMatchObject({ id: second.id, status: "hidden" });
+	host.send({ t: "set", id: second.id, status: "open" });
+	expect((await host.next("q")).q).toMatchObject({ id: second.id, status: "open" });
 });

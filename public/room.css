@@ -1,43 +1,283 @@
-.room main{padding:0 var(--pad) 2rem}
-.conn{color:var(--dim);font-size:.875rem}
-.conn[data-bad]{color:var(--lit);font-weight:600}
-.room main>.share{display:grid;gap:.5rem;padding:1.25rem;margin:1rem 0 2rem;background:var(--raised)}
-.share h2{font-size:1rem}
-.share a{overflow-wrap:anywhere}
-.share .btn{margin-left:.5rem}
-.stage{display:grid;gap:2rem}
-.qs li.done .qtext{color:var(--dim)}
-.count{display:grid;justify-items:center;min-height:3.25rem;padding:.3rem .25rem;color:var(--dim);line-height:1.2}
-.count b{font-size:1.25rem;font-weight:700;color:var(--lit)}
-.count span{font-size:.75rem}
-.acts{grid-column:2;display:flex;flex-wrap:wrap;gap:.5rem}
-.dock{position:sticky;bottom:0;margin:2rem calc(var(--pad) * -1) -2rem;padding:1rem var(--pad);max-width:none;background:var(--ground);border-top:1px solid var(--line)}
+.room main {
+	padding: 0 var(--pad) 2rem;
+}
+.conn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4em;
+	margin: 0 0.5rem 0 0;
+	color: var(--dim);
+	font-size: 0.875rem;
+}
+.conn[data-bad] {
+	color: var(--lit);
+	font-weight: 600;
+}
+.panels {
+	display: grid;
+	gap: 1rem;
+	margin: 1rem 0 2rem;
+}
+@media (min-width: 56rem) {
+	.panels {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+.panel {
+	display: grid;
+	gap: 0.75rem;
+	align-content: start;
+	padding: 1.25rem;
+	background: var(--raised);
+}
+.panel h2 {
+	font-size: 0.875rem;
+	font-weight: 600;
+	letter-spacing: 0;
+	color: var(--dim);
+}
+.row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+.url {
+	flex: 1 1 12rem;
+	min-width: 0;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+.panel .note {
+	display: flex;
+	gap: 0.4em;
+	align-items: flex-start;
+}
+.panel .note .ico {
+	margin-top: 0.2em;
+}
+.total {
+	color: var(--dim);
+	font-size: 0.875rem;
+	margin-bottom: 0.5rem;
+}
+.stage {
+	display: grid;
+	gap: 2rem;
+}
+.qs li.done .qtext {
+	color: var(--dim);
+}
+.count {
+	display: grid;
+	justify-items: center;
+	min-height: 3.25rem;
+	padding: 0.3rem 0.25rem;
+	color: var(--dim);
+	line-height: 1.2;
+}
+.count b {
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--lit);
+}
+.acts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+.acts .gap {
+	flex: 1 1 1rem;
+}
+.dock {
+	position: sticky;
+	bottom: 0;
+	margin: 2rem calc(var(--pad) * -1) -2rem;
+	padding: 1rem var(--pad);
+	max-width: none;
+	background: var(--ground);
+	border-top: 1px solid var(--line);
+}
 
 /* 프로젝터: 질문과 QR만 */
-[data-role=screen] .top{padding-bottom:0}
-[data-role=screen] .qtext{font-size:min(calc(1.4rem + var(--k,0) * .8rem),8vw)}
-.join{display:grid;gap:.5rem;justify-items:start;align-content:start}
-.qr{width:min(100%,16rem);aspect-ratio:1;padding:.75rem;background:var(--lit)}
-.qr svg{display:block;width:100%;height:100%}
-.join p{font-weight:600}
-.join-url{color:var(--dim);overflow-wrap:anywhere}
-@media (min-width:56rem){[data-role=screen] .stage{grid-template-columns:1fr 16rem;gap:4rem}.join{position:sticky;top:2rem}}
+[data-role="screen"] .stage {
+	margin-top: 1rem;
+}
+[data-role="screen"] .qtext {
+	font-size: min(calc(1.4rem + var(--k, 0) * 0.8rem), 8vw);
+}
+.join {
+	display: grid;
+	gap: 0.5rem;
+	justify-items: start;
+	align-content: start;
+}
+/* QR은 테마와 무관하게 흰 바탕에 검정 */
+.qr {
+	width: min(100%, 16rem);
+	aspect-ratio: 1;
+	padding: 0.75rem;
+	background: #fff;
+	color: #000;
+}
+.qr svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+.join p {
+	font-weight: 600;
+}
+.join-url {
+	color: var(--dim);
+	overflow-wrap: anywhere;
+}
+@media (min-width: 56rem) {
+	[data-role="screen"] .stage {
+		grid-template-columns: 1fr 16rem;
+		gap: 4rem;
+	}
+	.join {
+		position: sticky;
+		top: 2rem;
+	}
+}
 
 /* 답변: 공개된 것은 밝게, 초안은 어둡게 */
-.answer-pub{grid-column:2;display:grid;gap:.25rem;max-width:44rem}
-.answer-pub p:first-child{font-size:1.125rem}
-.qs .pair{grid-column:2;padding:0;border:0;gap:1.5rem}
-.qs .pair:last-child{border:0}
-.qs .pair .answer{justify-items:stretch}
-.qs .pair .state{justify-self:start}
-.pair textarea{width:100%;min-height:5.5rem;padding:.6rem .8rem;border-radius:6px;border:1px solid var(--line);background:var(--raised);color:var(--lit);font:inherit;resize:vertical}
-.pair textarea:hover{border-color:var(--dim)}
-.pair textarea[aria-invalid]{border-color:var(--lit);border-style:dashed}
-.pair .acts{grid-column:auto}
-.files{display:grid;gap:.25rem;margin:0;padding:0;list-style:none}
-.files li{display:flex;flex-wrap:wrap;gap:.25rem 1rem;justify-content:space-between;padding:.5rem 0;border-top:1px solid var(--line)}
-.file-status{color:var(--dim);font-size:.875rem}
-.file-btn{margin-right:.5rem}
-#file:focus-visible+*,.file-btn:has(+#file:focus-visible){outline:2px solid var(--lit);outline-offset:3px}
-.qs .pair .answer>.btn{justify-self:start}
-.source blockquote{white-space:pre-line}
+.answer-pub {
+	grid-column: 2;
+	display: grid;
+	gap: 0.25rem;
+	max-width: 44rem;
+}
+.answer-pub p:first-child {
+	font-size: 1.125rem;
+}
+.qs .pair {
+	grid-column: 2;
+	padding: 0;
+	border: 0;
+	gap: 1.5rem;
+}
+.qs .pair:last-child {
+	border: 0;
+}
+.qs .pair .answer {
+	justify-items: stretch;
+}
+.qs .pair .state {
+	justify-self: start;
+}
+.pair textarea {
+	width: 100%;
+	min-height: 5.5rem;
+	padding: 0.6rem 0.8rem;
+	border-radius: 6px;
+	border: 1px solid var(--line);
+	background: var(--raised);
+	color: var(--lit);
+	font: inherit;
+	resize: vertical;
+}
+.pair textarea:hover {
+	border-color: var(--dim);
+}
+.pair textarea[aria-invalid] {
+	border-color: var(--lit);
+	border-style: dashed;
+}
+.files {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.files li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 1rem;
+	justify-content: space-between;
+	padding: 0.5rem 0;
+	border-top: 1px solid var(--line);
+}
+.file-status {
+	color: var(--dim);
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+#file-note:empty {
+	display: none;
+}
+#file-err:empty {
+	display: none;
+}
+#file:focus-visible + *,
+#file-label:has(+ #file:focus-visible) {
+	outline: 2px solid var(--lit);
+	outline-offset: 3px;
+}
+.qs .pair .answer > .btn {
+	justify-self: start;
+}
+.source blockquote {
+	white-space: pre-line;
+}
+
+/* 묶인 질문, 묶기 후보, 숨김 */
+.similar,
+.near {
+	grid-column: 2;
+	color: var(--dim);
+	font-size: 0.9rem;
+}
+.similar summary,
+.hidden-box summary {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.similar ul {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.similar li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.25rem 0 0.25rem 0.75rem;
+	border: 0;
+	border-left: 1px solid var(--line);
+}
+.near {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.75rem;
+	border: 1px dashed var(--dim);
+}
+.near b {
+	color: var(--lit);
+}
+.hidden-box {
+	margin-top: 2rem;
+	color: var(--dim);
+}
+.hidden-box .qtext {
+	color: var(--dim);
+}
+.acts.side {
+	grid-column: 2;
+}

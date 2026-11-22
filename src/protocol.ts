@@ -1,6 +1,16 @@
 export type Status = "open" | "live" | "done" | "hidden";
 export type Answer = { text: string; sources: string[] };
-export type Question = { id: number; text: string; votes: number; status: Status; answer?: Answer };
+export type Similar = { id: number; text: string };
+/** similar: 이 질문에 묶인 비슷한 질문. near: 묶을지 발표자가 정할 후보(발표자에게만 보낸다). */
+export type Question = {
+	id: number;
+	text: string;
+	votes: number;
+	status: Status;
+	answer?: Answer;
+	similar?: Similar[];
+	near?: Similar;
+};
 export type Source = { key: string; text: string };
 /** pending: 만드는 중, ready: 초안 있음, none: 자료에 없음, error: 실패 */
 export type Draft = {
@@ -16,7 +26,10 @@ export type ClientMsg =
 	| { t: "set"; id: number; status: Status }
 	| { t: "draft"; id: number }
 	| { t: "approve"; id: number; text: string }
-	| { t: "unapprove"; id: number };
+	| { t: "unapprove"; id: number }
+	| { t: "merge"; id: number; into: number }
+	| { t: "split"; id: number }
+	| { t: "keep"; id: number };
 
 export type ServerMsg =
 	| {
