@@ -55,6 +55,7 @@
 							>이 페이지 주소는 공유하지 마세요. 발표자 권한이 들어 있습니다.</span
 						>
 					</p>
+					<p class="note" id="expires"></p>
 				</section>
 
 				<section class="panel" aria-labelledby="mat-h">
@@ -70,7 +71,12 @@
 				</section>
 			</div>
 
-			<p class="total" id="total" hidden></p>
+			<div class="bar" id="bar" hidden>
+				<p class="total" id="total"></p>
+				<button class="btn" type="button" id="review" aria-pressed="false"></button>
+				<button class="btn" type="button" id="export"></button>
+			</div>
+			<p class="note keys" id="keys" data-i18n="keys" hidden></p>
 			<div class="stage">
 				<div class="list">
 					<p class="empty" id="msg" hidden></p>

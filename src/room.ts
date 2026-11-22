@@ -11,7 +11,7 @@ import {
 	type Status,
 } from "./protocol.ts";
 
-type Attachment = { voter: string; host: boolean };
+type Attachment = { voter: string; host: boolean; ip: string };
 type QRow = {
 	id: number;
 	text: string;
@@ -28,11 +28,21 @@ type DRow = {
 	text: string;
 	sources: string;
 	approved: number;
+	at: number | null;
 };
 
 const MAX_QUESTIONS = 300;
 const ASK_INTERVAL_MS = 5000;
 const STATUSES: Status[] = ["open", "live", "done", "hidden"];
+/** 한 IP에서 1분 동안. 발표장은 같은 IP를 쓰므로 넉넉하게 둔다. */
+const IP_ASKS = 20;
+const IP_VOTERS = 120;
+const TTL_MS = 7 * 86_400_000;
+const PENDING_MS = 90_000;
+const POLL_MS = 15_000;
+const POLL_MAX_MS = 20 * 60_000;
+const BACKFILL = 50;
+const GUARD = "@cf/meta/llama-guard-3-8b";
 const MODEL = "@cf/openai/gpt-oss-120b";
 const EMBED = "@cf/baai/bge-m3";
 /** 코사인 유사도. AUTO 이상이면 바로 묶고, NEAR 이상이면 발표자에게 후보로 보여 준다. */
@@ -57,6 +67,11 @@ export class Room extends DurableObject<Cloudflare.Env> {
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
 		this.sql = ctx.storage.sql;
+		this.schema();
+		ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+	}
+
+	private schema() {
 		this.sql.exec(`
 			CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 			CREATE TABLE IF NOT EXISTS q (
@@ -78,16 +93,26 @@ export class Room extends DurableObject<Cloudflare.Env> {
 				sources TEXT NOT NULL DEFAULT '[]',
 				approved INTEGER NOT NULL DEFAULT 0
 			);
+			CREATE TABLE IF NOT EXISTS seen (
+				voter TEXT PRIMARY KEY,
+				ip TEXT NOT NULL,
+				at INTEGER NOT NULL
+			) WITHOUT ROWID;
 		`);
-		// 묶기용 열. 이미 있으면 넘어간다.
-		for (const col of ["grp INTEGER", "near INTEGER", "vec BLOB"]) {
+		// 나중에 더한 열. 이미 있으면 넘어간다.
+		for (const col of [
+			"q ADD COLUMN grp INTEGER",
+			"q ADD COLUMN near INTEGER",
+			"q ADD COLUMN vec BLOB",
+			"q ADD COLUMN ip TEXT",
+			"draft ADD COLUMN at INTEGER",
+		]) {
 			try {
-				this.sql.exec("ALTER TABLE q ADD COLUMN " + col);
+				this.sql.exec("ALTER TABLE " + col);
 			} catch {
 				// 이미 있음
 			}
 		}
-		ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 	}
 
 	private meta(k: string): string | null {
@@ -113,22 +138,111 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		if (this.meta("host")) return false;
 		this.setMeta("host", hash);
 		this.setMeta("id", id);
+		this.arm();
 		return true;
 	}
 
+	/** 지울 날을 정한다. */
+	private arm(): number {
+		const expires = Date.now() + TTL_MS;
+		this.setMeta("expires", String(expires));
+		this.ctx.waitUntil(this.ctx.storage.setAlarm(expires));
+		return expires;
+	}
+
 	/** 없는 방이면 null. */
-	check(hash: string | null): { host: boolean; files: number } | null {
+	check(hash: string | null): { host: boolean; files: number; expires: number } | null {
 		const stored = this.meta("host");
 		if (!stored) return null;
-		return { host: hash !== null && same(hash, stored), files: this.files() };
+		// 지울 날이 생기기 전에 만든 방
+		const expires = Number(this.meta("expires")) || this.arm();
+		return { host: hash !== null && same(hash, stored), files: this.files(), expires };
 	}
 
 	/** 자료가 하나 올라왔다. */
 	addFile(): number {
 		const n = this.files() + 1;
 		this.setMeta("files", String(n));
+		this.setMeta("indexed", this.meta("indexed") ?? "0");
+		this.setMeta("poll", String(Date.now()));
+		this.ctx.waitUntil(this.ctx.storage.setAlarm(Date.now() + POLL_MS));
 		this.broadcast({ t: "files", n });
 		return n;
+	}
+
+	/** 색인이 끝났는지 지켜보다가 초안을 채우고, 기한이 지나면 방을 지운다. */
+	async alarm() {
+		const now = Date.now();
+		const expires = Number(this.meta("expires"));
+		if (!expires) return;
+		if (now >= expires) return this.destroy();
+		const since = Number(this.meta("poll"));
+		let again = false;
+		if (since) {
+			again = now - since < POLL_MAX_MS && (await this.indexing());
+			if (!again) {
+				this.sql.exec("DELETE FROM meta WHERE k = 'poll'");
+				await this.backfill();
+			}
+		}
+		await this.ctx.storage.setAlarm(again ? Math.min(now + POLL_MS, expires) : expires);
+	}
+
+	/** 아직 색인 중인 자료가 있으면 true. */
+	private async indexing(): Promise<boolean> {
+		try {
+			const { result } = await this.env.AI_SEARCH.get(instanceId(this.meta("id") ?? "")).items.list(
+				{
+					per_page: 50,
+				},
+			);
+			this.setMeta("indexed", String(result.filter((i) => i.status === "completed").length));
+			return (
+				result.length < this.files() ||
+				result.some((i) => i.status === "queued" || i.status === "running")
+			);
+		} catch (e) {
+			console.warn(JSON.stringify({ msg: "index_poll_failed", error: String(e) }));
+			return true;
+		}
+	}
+
+	/** 초안이 없거나 자료에서 못 찾았던 질문을 다시 찾는다. */
+	private async backfill() {
+		const rows = this.sql
+			.exec<{ id: number; text: string }>(
+				`SELECT q.id, q.text FROM q LEFT JOIN draft d ON d.qid = q.id
+				WHERE q.grp IS NULL AND q.status IN ('open', 'live') AND (d.qid IS NULL OR (d.approved = 0
+					AND (d.status IN ('none', 'error') OR (d.status = 'pending' AND COALESCE(d.at, 0) < ?))))
+				ORDER BY q.id LIMIT ${BACKFILL}`,
+				Date.now() - PENDING_MS,
+			)
+			.toArray();
+		for (const r of rows) await this.makeDraft(r.id, r.text);
+	}
+
+	private async destroy() {
+		const roomId = this.meta("id");
+		if (roomId && this.files() > 0) {
+			try {
+				await this.env.AI_SEARCH.delete(instanceId(roomId));
+			} catch (e) {
+				console.warn(JSON.stringify({ msg: "instance_delete", room: roomId, error: String(e) }));
+				// 이미 없는 것이 아니면 한 시간 뒤에 다시 지운다.
+				if (!/not.?found/i.test(String(e)))
+					return this.ctx.storage.setAlarm(Date.now() + 3_600_000);
+			}
+		}
+		for (const ws of this.ctx.getWebSockets()) {
+			try {
+				ws.close(1001, "expired");
+			} catch {
+				// 이미 닫힘
+			}
+		}
+		await this.ctx.storage.deleteAlarm();
+		await this.ctx.storage.deleteAll();
+		this.schema();
 	}
 
 	async fetch(request: Request): Promise<Response> {
@@ -137,13 +251,29 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		const url = new URL(request.url);
 		const voter = url.searchParams.get("v") ?? "";
 		if (!VOTER_ID.test(voter)) return new Response(null, { status: 400 });
-		const key = url.searchParams.get("k");
-		const host = key !== null && same(await sha256(key), stored);
-		if (key !== null && !host) return new Response(null, { status: 403 });
+		// 새 추천인은 IP마다 정해진 수만 받는다.
+		const ip = (await sha256(request.headers.get("CF-Connecting-IP") ?? "")).slice(0, 16);
+		const now = Date.now();
+		if (!this.sql.exec("SELECT 1 FROM seen WHERE voter = ?", voter).toArray().length) {
+			const { n } = this.sql
+				.exec<{ n: number }>(
+					"SELECT COUNT(*) AS n FROM seen WHERE ip = ? AND at > ?",
+					ip,
+					now - 60_000,
+				)
+				.one();
+			if (n >= IP_VOTERS) return new Response(null, { status: 429 });
+			this.sql.exec("INSERT INTO seen (voter, ip, at) VALUES (?, ?, ?)", voter, ip, now);
+		}
 
 		const { 0: client, 1: server } = new WebSocketPair();
-		this.ctx.acceptWebSocket(server, [host ? "host" : "aud"]);
-		server.serializeAttachment({ voter, host } satisfies Attachment);
+		this.ctx.acceptWebSocket(server);
+		server.serializeAttachment({ voter, host: false, ip } satisfies Attachment);
+		this.sendState(server, voter, false);
+		return new Response(null, { status: 101, webSocket: client });
+	}
+
+	private sendState(ws: WebSocket, voter: string, host: boolean) {
 		const mine = this.sql
 			.exec<{ id: number }>(
 				"SELECT DISTINCT COALESCE(q.grp, q.id) AS id FROM vote JOIN q ON q.id = vote.qid WHERE vote.voter = ?",
@@ -154,15 +284,15 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		if (host)
 			for (const row of this.sql.exec<DRow>("SELECT * FROM draft").toArray())
 				drafts[row.qid] = toDraft(row);
-		this.send(server, {
+		this.send(ws, {
 			t: "state",
 			host,
 			qs: this.questions(host),
 			mine: mine.map((r) => r.id),
 			files: this.files(),
+			review: host && this.meta("review") === "1",
 			drafts,
 		});
-		return new Response(null, { status: 101, webSocket: client });
 	}
 
 	/** 묶음의 대표 질문만 돌려준다. 숨긴 질문과 묶기 후보는 발표자에게만 간다. */
@@ -212,10 +342,12 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		ws.send(JSON.stringify(msg));
 	}
 
-	private broadcast(msg: ServerMsg, tag?: string) {
+	private broadcast(msg: ServerMsg, to?: "host" | "aud") {
 		const text = JSON.stringify(msg);
-		for (const ws of this.ctx.getWebSockets(tag)) {
+		for (const ws of this.ctx.getWebSockets()) {
 			try {
+				if (to && ((ws.deserializeAttachment() as Attachment).host ? "host" : "aud") !== to)
+					continue;
 				ws.send(text);
 			} catch {
 				// 닫히는 중인 소켓
@@ -271,18 +403,45 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		return false;
 	}
 
-	private async afterAsk(id: number, text: string) {
-		if (!(await this.cluster(id, text)) && this.files() > 0) await this.makeDraft(id, text);
+	/** 문제가 될 질문이면 false. 확인에 실패하면 그대로 보여 준다. */
+	private async safe(text: string): Promise<boolean> {
+		try {
+			const out = (await this.env.AI.run(GUARD, {
+				messages: [{ role: "user", content: text }],
+			})) as { response?: unknown };
+			const r = out.response;
+			return typeof r === "string"
+				? !/^\s*unsafe/i.test(r)
+				: (r as { safe?: boolean } | undefined)?.safe !== false;
+		} catch (e) {
+			console.warn(JSON.stringify({ msg: "guard_failed", error: String(e) }));
+			return true;
+		}
+	}
+
+	/** 새 질문은 숨긴 채로 들어온다. 검토 방이 아니고 확인을 통과하면 연다. */
+	private async afterAsk(id: number, text: string, review: boolean) {
+		if (review || !(await this.safe(text))) return this.publish(id);
+		this.sql.exec("UPDATE q SET status = 'open' WHERE id = ? AND status = 'hidden'", id);
+		this.publish(id);
+		await this.process(id, text);
+	}
+
+	private async process(id: number, text: string) {
+		if (await this.cluster(id, text)) return;
+		// 색인된 자료가 아직 없으면 색인이 끝난 뒤 alarm이 채운다.
+		if (Number(this.meta("indexed") ?? this.files()) > 0) await this.makeDraft(id, text);
 	}
 
 	private saveDraft(id: number, d: Omit<Draft, "approved">) {
 		this.sql.exec(
-			`INSERT INTO draft (qid, status, text, sources) VALUES (?1, ?2, ?3, ?4)
-			ON CONFLICT (qid) DO UPDATE SET status = ?2, text = ?3, sources = ?4, approved = 0`,
+			`INSERT INTO draft (qid, status, text, sources, at) VALUES (?1, ?2, ?3, ?4, ?5)
+			ON CONFLICT (qid) DO UPDATE SET status = ?2, text = ?3, sources = ?4, at = ?5, approved = 0`,
 			id,
 			d.status,
 			d.text,
 			JSON.stringify(d.sources),
+			Date.now(),
 		);
 		this.broadcast({ t: "draft", id, d: { ...d, approved: false } }, "host");
 	}
@@ -304,7 +463,7 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			const text = (res.choices[0]?.message.content ?? "").trim();
 			const sources = res.chunks
 				.slice(0, 2)
-				.map((c) => ({ key: c.item.key, text: excerpt(c.text, text) }));
+				.map((c) => ({ key: c.item.key, ...excerpt(c.text, text) }));
 			if (!sources.length || !text || /^NONE\b/i.test(text))
 				this.saveDraft(id, { status: "none", text: "", sources: [] });
 			else this.saveDraft(id, { status: "ready", text, sources });
@@ -317,7 +476,7 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		this.publish(id);
 	}
 
-	webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
+	async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
 		if (typeof raw !== "string" || raw.length > 4000) return;
 		let msg: ClientMsg;
 		try {
@@ -326,6 +485,20 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			return;
 		}
 		const who = ws.deserializeAttachment() as Attachment;
+
+		if (msg.t === "auth") {
+			const stored = this.meta("host");
+			if (!stored || typeof msg.k !== "string" || !same(await sha256(msg.k), stored))
+				return this.send(ws, { t: "err", code: "key" });
+			ws.serializeAttachment({ ...who, host: true } satisfies Attachment);
+			return this.sendState(ws, who.voter, true);
+		}
+
+		if (msg.t === "review") {
+			if (!who.host) return;
+			this.setMeta("review", msg.on ? "1" : "0");
+			return this.broadcast({ t: "review", on: !!msg.on }, "host");
+		}
 
 		if (msg.t === "ask") {
 			const text = String(msg.text ?? "")
@@ -337,19 +510,28 @@ export class Room extends DurableObject<Cloudflare.Env> {
 				.exec<{ at: number | null }>("SELECT MAX(at) AS at FROM q WHERE voter = ?", who.voter)
 				.one().at;
 			if (last && now - last < ASK_INTERVAL_MS) return this.send(ws, { t: "err", code: "slow" });
+			const recent = this.sql
+				.exec<{ n: number }>(
+					"SELECT COUNT(*) AS n FROM q WHERE ip = ? AND at > ?",
+					who.ip,
+					now - 60_000,
+				)
+				.one().n;
+			if (recent >= IP_ASKS) return this.send(ws, { t: "err", code: "slow" });
 			const count = this.sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM q").one().n;
 			if (count >= MAX_QUESTIONS) return this.send(ws, { t: "err", code: "full" });
 			const { id } = this.sql
 				.exec<{ id: number }>(
-					"INSERT INTO q (text, voter, at) VALUES (?, ?, ?) RETURNING id",
+					"INSERT INTO q (text, voter, at, ip, status) VALUES (?, ?, ?, ?, 'hidden') RETURNING id",
 					text,
 					who.voter,
 					now,
+					who.ip,
 				)
 				.one();
-			this.send(ws, { t: "asked" });
-			this.publish(id);
-			this.ctx.waitUntil(this.afterAsk(id, text));
+			const review = this.meta("review") === "1";
+			this.send(ws, { t: "asked", held: review });
+			this.ctx.waitUntil(this.afterAsk(id, text, review));
 			return;
 		}
 
@@ -402,7 +584,14 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			);
 			this.sql.exec("UPDATE q SET status = ? WHERE id = ?", msg.status, id);
 			for (const row of wasLive) this.publish(row.id);
-			return this.publish(id);
+			this.publish(id);
+			// 숨긴 채로 들어온 질문은 열 때 묶기와 초안을 처리한다.
+			const fresh =
+				q.status === "hidden" &&
+				msg.status !== "hidden" &&
+				this.sql.exec("SELECT 1 FROM q WHERE id = ? AND vec IS NULL", id).toArray().length > 0;
+			if (fresh) this.ctx.waitUntil(this.process(id, q.text));
+			return;
 		}
 
 		if (msg.t === "merge") {
@@ -450,7 +639,7 @@ export class Room extends DurableObject<Cloudflare.Env> {
 }
 
 /** 청크에서 답변과 낱말이 가장 많이 겹치는 줄과 그 앞뒤 줄만 보여 준다. */
-function excerpt(chunk: string, answer: string): string {
+function excerpt(chunk: string, answer: string): { text: string; at?: string } {
 	const lines = chunk
 		.split("\n")
 		.map((l) => l.trim())
@@ -463,10 +652,17 @@ function excerpt(chunk: string, answer: string): string {
 		for (const w of words) if (line.includes(w)) score++;
 		if (score > bestScore) [best, bestScore] = [i, score];
 	});
-	return lines
+	const text = lines
 		.slice(Math.max(0, best - 1), best + 2)
 		.join("\n")
 		.slice(0, 500);
+	// 그 줄 위에서 가장 가까운 마크다운 제목
+	const at = lines
+		.slice(0, best + 1)
+		.findLast((l) => /^#{1,6}\s/.test(l))
+		?.replace(/^#+\s*/, "")
+		.slice(0, 80);
+	return at ? { text, at } : { text };
 }
 
 function unit(v: number[]): Float32Array {
@@ -481,8 +677,10 @@ function dot(a: Float32Array, b: Float32Array): number {
 }
 
 function toDraft(row: DRow): Draft {
+	// 만들다 멈춘 초안은 실패로 보여 준다.
+	const stale = row.status === "pending" && Date.now() - (row.at ?? 0) > PENDING_MS;
 	return {
-		status: row.status,
+		status: stale ? "error" : row.status,
 		text: row.text,
 		sources: JSON.parse(row.sources),
 		approved: row.approved === 1,

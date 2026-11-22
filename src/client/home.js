@@ -129,7 +129,7 @@ async function createRoom(token) {
 		if (res.status === 403) return idle("err.turnstile");
 		if (!res.ok) throw new Error(res.status);
 		const room = await res.json();
-		location.href = "/r/" + room.id + "/host?k=" + room.token;
+		location.href = "/r/" + room.id + "/host#k=" + room.token;
 	} catch {
 		idle("err.create");
 	}

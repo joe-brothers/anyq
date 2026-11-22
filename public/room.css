@@ -59,10 +59,32 @@
 .panel .note .ico {
 	margin-top: 0.2em;
 }
+.bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
 .total {
+	flex: 1 1 8rem;
 	color: var(--dim);
 	font-size: 0.875rem;
-	margin-bottom: 0.5rem;
+}
+.btn[aria-pressed="true"] {
+	background: var(--lit);
+	color: var(--ground);
+	border-color: var(--lit);
+}
+.keys {
+	margin: 0.5rem 0;
+}
+#expires:empty {
+	display: none;
+}
+@media (hover: none) {
+	.keys {
+		display: none;
+	}
 }
 .stage {
 	display: grid;
@@ -105,6 +127,16 @@
 /* 프로젝터: 질문과 QR만 */
 [data-role="screen"] .stage {
 	margin-top: 1rem;
+}
+/* 답변 중인 질문은 맨 위에 붙어 있다 */
+[data-role="screen"] .qs li.live {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--ground);
+}
+[data-role="screen"] li.live .answer-pub p:first-child {
+	font-size: clamp(1.25rem, 2.2vw, 2rem);
 }
 [data-role="screen"] .qtext {
 	font-size: min(calc(1.4rem + var(--k, 0) * 0.8rem), 8vw);

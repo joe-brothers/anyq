@@ -82,6 +82,10 @@ async function human(request: Request): Promise<boolean> {
 	return res.ok && (await res.json<{ success: boolean }>()).success === true;
 }
 
+/** 발표자 키는 주소가 아니라 헤더로 받는다. 주소는 로그에 남는다. */
+const bearer = (request: Request) =>
+	request.headers.get("authorization")?.replace(/^Bearer /, "") || null;
+
 const notFound = () => Response.json({ error: "not_found" }, { status: 404 });
 
 export default {
@@ -109,12 +113,12 @@ export default {
 			if (!ROOM_ID.test(id)) return notFound();
 			const room = ctx.exports.Room.getByName(id);
 			if (parts.length === 3 && request.method === "GET") {
-				const key = url.searchParams.get("k");
+				const key = bearer(request);
 				const info = await room.check(key ? await sha256(key) : null);
 				return info ? Response.json(info) : notFound();
 			}
 			if (parts.length === 4 && parts[3] === "files") {
-				const key = url.searchParams.get("k");
+				const key = bearer(request);
 				const info = await room.check(key ? await sha256(key) : null);
 				if (!info) return notFound();
 				if (!info.host) return Response.json({ error: "host_only" }, { status: 403 });

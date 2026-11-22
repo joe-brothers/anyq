@@ -23,7 +23,7 @@ async function createRoom() {
 }
 
 async function connect(id: string, voter: string, key?: string) {
-	const res = await SELF.fetch(`${origin}/api/rooms/${id}/ws?v=${voter}${key ? "&k=" + key : ""}`, {
+	const res = await SELF.fetch(`${origin}/api/rooms/${id}/ws?v=${voter}`, {
 		headers: { Upgrade: "websocket" },
 	});
 	const ws = res.webSocket;
@@ -42,7 +42,13 @@ async function connect(id: string, voter: string, key?: string) {
 			await new Promise<void>((r) => (wake = r));
 		}
 	};
-	return { status: res.status, ws, next, send: (m: unknown) => ws.send(JSON.stringify(m)) };
+	const send = (m: unknown) => ws.send(JSON.stringify(m));
+	// 발표자는 연결한 뒤 키를 보낸다. 그 전의 청중용 상태는 버린다.
+	if (key) {
+		await next("state");
+		send({ t: "auth", k: key });
+	}
+	return { status: res.status, ws, next, send };
 }
 
 it("없는 방은 404", async () => {
@@ -52,13 +58,20 @@ it("없는 방은 404", async () => {
 
 it("발표자 토큰을 확인한다", async () => {
 	const { id, token } = await createRoom();
-	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}?k=${token}`)).json()).toMatchObject({
+	const as = (k: string) => ({ headers: { authorization: "Bearer " + k } });
+	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}`, as(token))).json()).toMatchObject({
 		host: true,
 	});
-	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}?k=wrong`)).json()).toMatchObject({
+	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}`, as("wrong"))).json()).toMatchObject({
 		host: false,
 	});
-	expect((await connect(id, "voter-aaaa", "wrong")).status).toBe(403);
+	// 주소에 실은 키는 받지 않는다.
+	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}?k=${token}`)).json()).toMatchObject({
+		host: false,
+	});
+	const bad = await connect(id, "voter-aaaa", "wrong");
+	if (!bad.ws) throw new Error("연결 실패");
+	expect((await bad.next("err")).code).toBe("key");
 });
 
 it("질문, 추천, 발표자 상태 변경이 모두에게 전달된다", async () => {
@@ -143,4 +156,35 @@ it("비슷한 질문을 묶고, 발표자가 분리하고 숨김을 되돌린다
 	expect((await host.next("q")).q).toMatchObject({ id: second.id, status: "hidden" });
 	host.send({ t: "set", id: second.id, status: "open" });
 	expect((await host.next("q")).q).toMatchObject({ id: second.id, status: "open" });
+});
+
+it("검토 방에서는 발표자가 연 질문만 청중에게 보인다", async () => {
+	const { id, token } = await createRoom();
+	const a = await connect(id, "voter-aaaa");
+	const host = await connect(id, "voter-host", token);
+	if (!a.ws || !host.ws) throw new Error("연결 실패");
+	await a.next("state");
+	a.send({ t: "review", on: true });
+	host.send({ t: "review", on: true });
+	expect((await host.next("review")).on).toBe(true);
+
+	a.send({ t: "ask", text: "로그인해야 하나요?" });
+	expect((await a.next("asked")).held).toBe(true);
+	const q = (await host.next("q")).q;
+	expect(q.status).toBe("hidden");
+	expect((await a.next("del")).id).toBe(q.id);
+
+	host.send({ t: "set", id: q.id, status: "open" });
+	expect((await a.next("q")).q).toMatchObject({ id: q.id, status: "open" });
+});
+
+it("문제가 될 질문은 숨긴 채로 발표자에게만 간다", async () => {
+	vi.spyOn(env.AI, "run").mockImplementation((async () => ({ response: "unsafe\nS10" })) as never);
+	const { id, token } = await createRoom();
+	const a = await connect(id, "voter-aaaa");
+	const host = await connect(id, "voter-host", token);
+	if (!a.ws || !host.ws) throw new Error("연결 실패");
+	a.send({ t: "ask", text: "나쁜 말이 든 질문" });
+	expect((await a.next("asked")).held).toBe(false);
+	expect((await host.next("q")).q.status).toBe("hidden");
 });

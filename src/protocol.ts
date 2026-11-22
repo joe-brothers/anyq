@@ -11,7 +11,8 @@ export type Question = {
 	similar?: Similar[];
 	near?: Similar;
 };
-export type Source = { key: string; text: string };
+/** at: 근거가 있는 곳(가장 가까운 제목). */
+export type Source = { key: string; text: string; at?: string };
 /** pending: 만드는 중, ready: 초안 있음, none: 자료에 없음, error: 실패 */
 export type Draft = {
 	status: "pending" | "ready" | "none" | "error";
@@ -21,6 +22,8 @@ export type Draft = {
 };
 
 export type ClientMsg =
+	| { t: "auth"; k: string }
+	| { t: "review"; on: boolean }
 	| { t: "ask"; text: string }
 	| { t: "vote"; id: number }
 	| { t: "set"; id: number; status: Status }
@@ -38,6 +41,7 @@ export type ServerMsg =
 			qs: Question[];
 			mine: number[];
 			files: number;
+			review: boolean;
 			drafts: Record<number, Draft>;
 	  }
 	| { t: "q"; q: Question }
@@ -45,8 +49,9 @@ export type ServerMsg =
 	| { t: "mine"; id: number; mine: boolean }
 	| { t: "draft"; id: number; d: Draft }
 	| { t: "files"; n: number }
-	| { t: "asked" }
-	| { t: "err"; code: "length" | "slow" | "full" };
+	| { t: "review"; on: boolean }
+	| { t: "asked"; held: boolean }
+	| { t: "err"; code: "length" | "slow" | "full" | "key" };
 
 export const ROOM_ID = /^[a-hjkmnp-z2-9]{6}$/;
 export const VOTER_ID = /^[\w-]{8,64}$/;

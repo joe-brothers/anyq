@@ -38,6 +38,7 @@ const ICONS = {
 	spin: '<path d="M12 3a9 9 0 1 0 9 9"/>',
 	merge: '<path d="M6 4v5l6 5v6M18 4v5l-6 5"/>',
 	split: '<path d="M12 4v6l-6 5v5M12 10l6 5v5"/>',
+	download: '<path d="M12 4v12M6 10l6 6 6-6M4 20h16"/>',
 };
 
 export function icon(name) {
@@ -184,7 +185,17 @@ const M = {
 		merge: "합치기",
 		keep: "따로 두기",
 		"hidden.h": "숨김 {0}",
+		"hidden.review": "숨김 · 확인 대기 {0}",
 		"act.unhide": "되돌리기",
+		review: "확인 후 표시",
+		"asked.held": "발표자가 확인하면 표시됩니다.",
+		export: "내보내기",
+		"ex.answered": "공개한 답변",
+		"ex.missing": "자료에 없음",
+		"ex.rest": "그 밖의 질문",
+		"ex.votes": "추천 {0}",
+		keys: "J/K 이동 · L 답변 시작 · D 완료 · E 답변 쓰기 · Ctrl+Enter 공개",
+		expires: "방과 자료는 {0}에 지워집니다.",
 	},
 	en: {
 		"title.home": "anyQ: live Q&A with answers drafted from your slides",
@@ -322,7 +333,17 @@ const M = {
 		merge: "Merge",
 		keep: "Keep separate",
 		"hidden.h": "Hidden {0}",
+		"hidden.review": "Hidden · awaiting review {0}",
 		"act.unhide": "Restore",
+		review: "Review first",
+		"asked.held": "Shown once the host reviews it.",
+		export: "Export",
+		"ex.answered": "Published answers",
+		"ex.missing": "Not in the material",
+		"ex.rest": "Other questions",
+		"ex.votes": "{0} votes",
+		keys: "J/K move · L start answering · D done · E write answer · Ctrl+Enter publish",
+		expires: "This room and its material are deleted on {0}.",
 	},
 };
 
