@@ -4,7 +4,7 @@
 
 청중은 QR로 들어와 묻고 추천합니다. anyQ는 발표자가 올린 자료에서 답변 초안과 근거를 찾아 발표자에게만 보여 주고, 발표자가 승인한 답만 청중에게 공개합니다. 자료에 답이 없으면 "자료에 없음"으로 표시합니다.
 
-데모: https://anyq.vince-bc1.workers.dev (구조를 나누기 전 버전)
+데모: https://anyq.joe-brothers.com
 
 Cloudflare Developer Day Seoul 2026 Use Case 공모전 출품작입니다.
 
