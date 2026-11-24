@@ -1,5 +1,7 @@
 packages:
-  - "."
+  - "apps/*"
+  - "packages/*"
+  - "e2e"
 
 # Share Vite+'s core and Vitest with plugins to avoid duplicate runtimes.
 overrides:
@@ -10,3 +12,7 @@ overrides:
 allowBuilds:
   esbuild: true
   workerd: true
+  sharp: true
+
+minimumReleaseAgeExclude:
+  - hono@4.13.20

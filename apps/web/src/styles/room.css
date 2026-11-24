@@ -313,3 +313,24 @@
 .acts.side {
 	grid-column: 2;
 }
+
+/* 질문자 이름: 보조 정보라 어둡고 작다 */
+.by {
+	display: block;
+	margin-top: 0.35rem;
+	color: var(--dim);
+	font-size: 0.875rem;
+	font-weight: 400;
+	letter-spacing: 0;
+	line-height: 1.6;
+}
+[data-role="screen"] .by {
+	font-size: 1.125rem;
+}
+.similar .by {
+	display: inline;
+	margin-left: 0.5em;
+}
+.ask .name {
+	flex: 0 1 9rem;
+}

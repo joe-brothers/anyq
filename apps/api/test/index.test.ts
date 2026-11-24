@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { beforeEach, expect, it, vi } from "vite-plus/test";
-import type { ServerMsg } from "../src/protocol.ts";
+import { PROTOCOL_VERSION, type ServerMsg } from "@anyq/protocol";
 
 const origin = "https://example.com";
 
@@ -17,13 +17,17 @@ beforeEach(() => {
 });
 
 async function createRoom() {
-	const res = await SELF.fetch(origin + "/api/rooms", { method: "POST" });
+	const res = await SELF.fetch(origin + "/api/v1/rooms", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: "{}",
+	});
 	expect(res.status).toBe(201);
 	return (await res.json()) as { id: string; token: string };
 }
 
-async function connect(id: string, voter: string, key?: string) {
-	const res = await SELF.fetch(`${origin}/api/rooms/${id}/ws?v=${voter}`, {
+async function connect(id: string, voter: string, key?: string, version = PROTOCOL_VERSION) {
+	const res = await SELF.fetch(`${origin}/api/v1/rooms/${id}/ws?v=${voter}`, {
 		headers: { Upgrade: "websocket" },
 	});
 	const ws = res.webSocket;
@@ -43,35 +47,37 @@ async function connect(id: string, voter: string, key?: string) {
 		}
 	};
 	const send = (m: unknown) => ws.send(JSON.stringify(m));
-	// 발표자는 연결한 뒤 키를 보낸다. 그 전의 청중용 상태는 버린다.
-	if (key) {
-		await next("state");
-		send({ t: "auth", k: key });
-	}
+	// 연결하면 버전과 (발표자라면) 키를 먼저 보낸다.
+	send({ t: "hello", v: version, ...(key ? { k: key } : {}) });
 	return { status: res.status, ws, next, send };
 }
 
 it("없는 방은 404", async () => {
-	expect((await SELF.fetch(origin + "/api/rooms/abcdef")).status).toBe(404);
+	expect((await SELF.fetch(origin + "/api/v1/rooms/abcdef")).status).toBe(404);
 	expect((await connect("abcdef", "voter-aaaa")).status).toBe(404);
 });
 
 it("발표자 토큰을 확인한다", async () => {
 	const { id, token } = await createRoom();
 	const as = (k: string) => ({ headers: { authorization: "Bearer " + k } });
-	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}`, as(token))).json()).toMatchObject({
+	expect(await (await SELF.fetch(`${origin}/api/v1/rooms/${id}`, as(token))).json()).toMatchObject({
 		host: true,
 	});
-	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}`, as("wrong"))).json()).toMatchObject({
+	expect(
+		await (await SELF.fetch(`${origin}/api/v1/rooms/${id}`, as("wrong"))).json(),
+	).toMatchObject({
 		host: false,
 	});
 	// 주소에 실은 키는 받지 않는다.
-	expect(await (await SELF.fetch(`${origin}/api/rooms/${id}?k=${token}`)).json()).toMatchObject({
+	expect(await (await SELF.fetch(`${origin}/api/v1/rooms/${id}?k=${token}`)).json()).toMatchObject({
 		host: false,
 	});
 	const bad = await connect(id, "voter-aaaa", "wrong");
 	if (!bad.ws) throw new Error("연결 실패");
 	expect((await bad.next("err")).code).toBe("key");
+	const old = await connect(id, "voter-bbbb", undefined, PROTOCOL_VERSION - 1);
+	if (!old.ws) throw new Error("연결 실패");
+	expect((await old.next("err")).code).toBe("version");
 });
 
 it("질문, 추천, 발표자 상태 변경이 모두에게 전달된다", async () => {
@@ -163,10 +169,9 @@ it("검토 방에서는 발표자가 연 질문만 청중에게 보인다", asyn
 	const a = await connect(id, "voter-aaaa");
 	const host = await connect(id, "voter-host", token);
 	if (!a.ws || !host.ws) throw new Error("연결 실패");
-	await a.next("state");
-	a.send({ t: "review", on: true });
-	host.send({ t: "review", on: true });
-	expect((await host.next("review")).on).toBe(true);
+	a.send({ t: "opt", key: "review", on: true });
+	host.send({ t: "opt", key: "review", on: true });
+	expect((await host.next("opts")).opts.review).toBe(true);
 
 	a.send({ t: "ask", text: "로그인해야 하나요?" });
 	expect((await a.next("asked")).held).toBe(true);
@@ -187,4 +192,23 @@ it("문제가 될 질문은 숨긴 채로 발표자에게만 간다", async () =
 	a.send({ t: "ask", text: "나쁜 말이 든 질문" });
 	expect((await a.next("asked")).held).toBe(false);
 	expect((await host.next("q")).q.status).toBe("hidden");
+});
+
+it("이름은 선택이고, 프로젝터에 띄울지는 발표자가 정한다", async () => {
+	const { id, token } = await createRoom();
+	const a = await connect(id, "voter-aaaa");
+	const b = await connect(id, "voter-bbbb");
+	const host = await connect(id, "voter-host", token);
+	if (!a.ws || !b.ws || !host.ws) throw new Error("연결 실패");
+	expect((await a.next("state")).opts.names).toBe(true);
+
+	a.send({ t: "ask", text: "로그인해야 하나요?", name: "  김  철수 " });
+	expect((await host.next("q")).q.name).toBe("김 철수");
+	b.send({ t: "ask", text: "무료인가요?", name: "" });
+	expect((await host.next("q")).q.name).toBeUndefined();
+	a.send({ t: "ask", text: "이름이 너무 깁니다", name: "가".repeat(21) });
+	expect((await a.next("err")).code).toBe("length");
+
+	host.send({ t: "opt", key: "names", on: false });
+	expect((await a.next("opts")).opts.names).toBe(false);
 });

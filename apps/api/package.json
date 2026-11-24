@@ -1,0 +1,30 @@
+{
+	"name": "@anyq/api",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"dev": "cf dev",
+		"build": "cf build",
+		"deploy": "cf deploy",
+		"test": "vp test",
+		"typecheck": "cf workers types && vp check --no-fmt --no-lint"
+	},
+	"dependencies": {
+		"@anyq/protocol": "workspace:*",
+		"@hono/valibot-validator": "^0.6.2",
+		"hono": "^4.13.20",
+		"valibot": "^1.5.0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+		"@cloudflare/vitest-plugin": "^1.8.3",
+		"cf": "^1.0.0-rc.2",
+		"typescript": "^7.0.2",
+		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+		"vite-plus": "1.4.0",
+		"vitest": "5.0.5"
+	}
+}

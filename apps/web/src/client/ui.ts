@@ -1,13 +1,15 @@
-// 테마, 언어, 아이콘. 두 화면이 함께 쓴다.
+// 테마, 언어, 아이콘. 모든 화면이 함께 쓴다.
+type Lang = "ko" | "en";
+
 const store = {
-	get: (k) => {
+	get: (k: string): string | null => {
 		try {
 			return localStorage.getItem(k);
 		} catch {
 			return null;
 		}
 	},
-	set: (k, v) => {
+	set: (k: string, v: string) => {
 		try {
 			localStorage.setItem(k, v);
 		} catch {}
@@ -15,7 +17,7 @@ const store = {
 };
 
 // 24px 격자, 각진 끝. 화면의 형태(모서리 0)와 맞춘다.
-const ICONS = {
+export const ICONS: Record<string, string> = {
 	up: '<path d="M5 15l7-7 7 7"/>',
 	copy: '<path d="M9 9h11v11H9zM5 15V4h11"/>',
 	ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
@@ -41,16 +43,16 @@ const ICONS = {
 	download: '<path d="M12 4v12M6 10l6 6 6-6M4 20h16"/>',
 };
 
-export function icon(name) {
+export function icon(name: string): SVGSVGElement {
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("viewBox", "0 0 24 24");
 	svg.setAttribute("class", name === "spin" ? "ico spin" : "ico");
 	svg.setAttribute("aria-hidden", "true");
-	svg.innerHTML = ICONS[name];
+	svg.innerHTML = ICONS[name] ?? "";
 	return svg;
 }
 
-const M = {
+const M: Record<Lang, Record<string, string>> = {
 	ko: {
 		"title.home": "anyQ: 발표 자료에서 답을 찾아 두는 Q&A",
 		"title.room": "anyQ 질문 방 {0}",
@@ -187,6 +189,11 @@ const M = {
 		"hidden.h": "숨김 {0}",
 		"hidden.review": "숨김 · 확인 대기 {0}",
 		"act.unhide": "되돌리기",
+		"name.label": "이름",
+		"name.ph": "이름 (선택)",
+		"opt.names": "프로젝터에 이름",
+		"conn.version": "새로 고침 필요",
+		"msg.version": "새 버전이 나왔습니다. 새로 고쳐 주세요.",
 		review: "확인 후 표시",
 		"asked.held": "발표자가 확인하면 표시됩니다.",
 		export: "내보내기",
@@ -335,6 +342,11 @@ const M = {
 		"hidden.h": "Hidden {0}",
 		"hidden.review": "Hidden · awaiting review {0}",
 		"act.unhide": "Restore",
+		"name.label": "Name",
+		"name.ph": "Name (optional)",
+		"opt.names": "Names on projector",
+		"conn.version": "Refresh needed",
+		"msg.version": "A new version is out. Refresh the page.",
 		review: "Review first",
 		"asked.held": "Shown once the host reviews it.",
 		export: "Export",
@@ -347,17 +359,22 @@ const M = {
 	},
 };
 
-let lang = store.get("anyq-lang");
-if (!M[lang]) lang = (navigator.language ?? "ko").startsWith("ko") ? "ko" : "en";
+const saved = store.get("anyq-lang");
+let lang: Lang =
+	saved === "ko" || saved === "en"
+		? saved
+		: (navigator.language ?? "ko").startsWith("ko")
+			? "ko"
+			: "en";
 let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-const listeners = [];
+const listeners: (() => void)[] = [];
 
 export const getLang = () => lang;
 export const getTheme = () => theme;
-export const onLang = (fn) => listeners.push(fn);
-export function t(key, ...args) {
+export const onLang = (fn: () => void) => listeners.push(fn);
+export function t(key: string, ...args: unknown[]): string {
 	let s = M[lang][key] ?? M.ko[key] ?? key;
-	args.forEach((v, i) => (s = s.replace("{" + i + "}", v)));
+	args.forEach((v, i) => (s = s.replace("{" + i + "}", String(v))));
 	return s;
 }
 
@@ -366,10 +383,12 @@ const langBtn = document.getElementById("lang"),
 
 function paint() {
 	document.documentElement.lang = lang;
-	for (const n of document.querySelectorAll("[data-i18n]")) n.textContent = t(n.dataset.i18n);
-	for (const n of document.querySelectorAll("[data-i18n-ph]")) n.placeholder = t(n.dataset.i18nPh);
-	for (const n of document.querySelectorAll("[data-i18n-label]"))
-		n.setAttribute("aria-label", t(n.dataset.i18nLabel));
+	for (const n of document.querySelectorAll<HTMLElement>("[data-i18n]"))
+		n.textContent = t(n.dataset.i18n!);
+	for (const n of document.querySelectorAll<HTMLInputElement>("[data-i18n-ph]"))
+		n.placeholder = t(n.dataset.i18nPh!);
+	for (const n of document.querySelectorAll<HTMLElement>("[data-i18n-label]"))
+		n.setAttribute("aria-label", t(n.dataset.i18nLabel!));
 	if (langBtn) {
 		const name = document.createElement("span");
 		name.textContent = t("lang.name");
@@ -398,5 +417,6 @@ themeBtn?.addEventListener("click", () => {
 	paint();
 });
 
-for (const n of document.querySelectorAll("[data-icon]")) n.replaceWith(icon(n.dataset.icon));
+for (const n of document.querySelectorAll<HTMLElement>("[data-icon]"))
+	n.replaceWith(icon(n.dataset.icon!));
 paint();

@@ -1,0 +1,47 @@
+---
+import { ROOM_ID } from "@anyq/protocol";
+import Base from "../../../layouts/Base.astro";
+import "../../../styles/room.css";
+import Room from "../../../room/Room.tsx";
+import { toApi } from "../../../server/api.ts";
+
+const { id = "", view } = Astro.params;
+const role =
+	view === undefined ? "audience" : view === "host" || view === "screen" ? view : null;
+
+// 없는 방은 화면을 그리기 전에 서버에서 404로 답한다.
+let found = role !== null && ROOM_ID.test(id);
+let failed = false;
+if (found) {
+	const res = await toApi(new Request(new URL("/api/v1/rooms/" + id, Astro.url)));
+	if (res.status === 404) found = false;
+	else if (!res.ok) failed = true;
+}
+if (!found) Astro.response.status = 404;
+else if (failed) Astro.response.status = 502;
+const msg = !found ? "msg.404" : failed ? "msg.fail" : null;
+---
+
+<Base title="anyQ 질문 방" bodyClass="room" role={role ?? "audience"} noindex>
+	<header class="top">
+		<a class="logo" href="/" data-i18n-label="logo.label" aria-label="anyQ 처음으로">anyQ</a>
+		<div class="tools">
+			<p class="conn" id="conn" role="status"></p>
+			<button class="btn tool" type="button" id="lang" hidden></button>
+			<button class="btn tool" type="button" id="theme" hidden></button>
+		</div>
+	</header>
+	<main>
+		<h1 class="sr" id="title" data-i18n="room.h">질문 방</h1>
+		{
+			msg ? (
+				<p class="empty" data-i18n={msg} />
+			) : (
+				<Room client:only="preact" id={id} role={role!} />
+			)
+		}
+	</main>
+	<script>
+		import "../../../client/ui.ts";
+	</script>
+</Base>

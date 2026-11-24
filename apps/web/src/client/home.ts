@@ -1,9 +1,25 @@
-import { getLang, getTheme, icon, onLang, t } from "./ui.js";
+import { ApiError, api } from "./api.ts";
+import { getLang, getTheme, icon, onLang, t } from "./ui.ts";
 
-const $ = (s) => document.getElementById(s);
+declare global {
+	interface Window {
+		turnstile?: { render(el: HTMLElement, opts: Record<string, unknown>): void };
+	}
+}
+
+type DemoQ = {
+	id: number;
+	seed?: number;
+	text?: string;
+	votes: number;
+	live: boolean;
+	mine: boolean;
+};
+
+const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.getElementById(s) as T;
 
 // 예시 방: 이 페이지 안에서만 움직인다.
-let qs = [14, 9, 6, 4, 2, 1].map((votes, id) => ({
+const qs: DemoQ[] = [14, 9, 6, 4, 2, 1].map((votes, id) => ({
 	id,
 	seed: id,
 	votes,
@@ -13,9 +29,9 @@ let qs = [14, 9, 6, 4, 2, 1].map((votes, id) => ({
 const list = $("qs"),
 	empty = $("qs-empty"),
 	live = $("live");
-const textOf = (q) => q.text ?? t("seed." + q.seed);
+const textOf = (q: DemoQ) => q.text ?? t("seed." + q.seed);
 
-function render(focusId) {
+function render(focusId?: number) {
 	qs.sort((a, b) => b.votes - a.votes || a.id - b.id);
 	list.replaceChildren(
 		...qs.map((q) => {
@@ -24,14 +40,14 @@ function render(focusId) {
 			const btn = document.createElement("button");
 			btn.type = "button";
 			btn.className = "vote";
-			btn.dataset.id = q.id;
-			btn.setAttribute("aria-pressed", q.mine);
+			btn.dataset.id = String(q.id);
+			btn.setAttribute("aria-pressed", String(q.mine));
 			btn.setAttribute(
 				"aria-label",
 				t("vote.label", t(q.mine ? "unvote" : "vote"), q.votes, textOf(q)),
 			);
 			const n = document.createElement("b");
-			n.textContent = q.votes;
+			n.textContent = String(q.votes);
 			btn.append(icon("up"), n);
 			const p = document.createElement("p");
 			p.className = "qtext";
@@ -48,13 +64,13 @@ function render(focusId) {
 		}),
 	);
 	empty.hidden = qs.length > 0;
-	if (focusId != null) list.querySelector('[data-id="' + focusId + '"]')?.focus();
+	if (focusId != null) list.querySelector<HTMLElement>('[data-id="' + focusId + '"]')?.focus();
 }
 
 list.addEventListener("click", (e) => {
-	const btn = e.target.closest(".vote");
-	if (!btn) return;
-	const q = qs.find((q) => q.id == btn.dataset.id);
+	const btn = (e.target as HTMLElement).closest<HTMLElement>(".vote");
+	const q = btn && qs.find((q) => q.id === Number(btn.dataset.id));
+	if (!q) return;
 	q.mine = !q.mine;
 	q.votes += q.mine ? 1 : -1;
 	render(q.id);
@@ -62,7 +78,7 @@ list.addEventListener("click", (e) => {
 });
 
 const form = $("ask"),
-	input = $("q"),
+	input = $<HTMLInputElement>("q"),
 	err = $("q-err");
 let nextId = qs.length;
 form.addEventListener("submit", (e) => {
@@ -101,47 +117,40 @@ approve.addEventListener("click", () => {
 });
 
 // 방 만들기
-const create = $("create"),
+const create = $<HTMLButtonElement>("create"),
 	createErr = $("create-err"),
 	ts = $("ts");
-let busy = null,
-	errKey = null;
+let busy: string | null = null,
+	errKey: string | null = null;
 function paintCreate() {
 	create.disabled = !!busy;
 	create.replaceChildren(icon(busy ? "spin" : "plus"), t(busy ?? "create"));
 	createErr.textContent = errKey ? t(errKey) : "";
 }
-const idle = (key = null) => {
+const idle = (key: string | null = null) => {
 	busy = null;
 	errKey = key;
 	paintCreate();
 };
 
-async function createRoom(token) {
+async function createRoom(token?: string) {
 	busy = "creating";
 	paintCreate();
 	try {
-		const res = await fetch("/api/rooms", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ token }),
-		});
-		if (res.status === 403) return idle("err.turnstile");
-		if (!res.ok) throw new Error(res.status);
-		const room = await res.json();
+		const room = await api.createRoom(token);
 		location.href = "/r/" + room.id + "/host#k=" + room.token;
-	} catch {
-		idle("err.create");
+	} catch (e) {
+		idle(e instanceof ApiError && e.status === 403 ? "err.turnstile" : "err.create");
 	}
 }
 
 // Turnstile 스크립트는 버튼을 누른 뒤에만 불러온다.
 const loadTurnstile = () =>
-	new Promise((ok, fail) => {
+	new Promise<void>((ok, fail) => {
 		if (window.turnstile) return ok();
 		const s = document.createElement("script");
 		s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-		s.onload = ok;
+		s.onload = () => ok();
 		s.onerror = fail;
 		document.head.append(s);
 	});
@@ -151,11 +160,11 @@ create.addEventListener("click", async () => {
 	errKey = null;
 	paintCreate();
 	try {
-		const { sitekey } = await (await fetch("/api/config")).json();
+		const { sitekey } = await api.config();
 		if (!sitekey) return createRoom();
 		await loadTurnstile();
 		ts.replaceChildren();
-		window.turnstile.render(ts, {
+		window.turnstile!.render(ts, {
 			sitekey,
 			theme: getTheme(),
 			language: getLang(),
