@@ -1,7 +1,8 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 async function createRoom(page: Page) {
-	const res = await page.request.post("/api/v1/rooms", { data: {} });
+	// 로컬 API는 Turnstile 테스트 키를 써서 아무 토큰이나 통과한다.
+	const res = await page.request.post("/api/v1/rooms", { data: { token: "dummy" } });
 	expect(res.status()).toBe(201);
 	return (await res.json()) as { id: string; token: string };
 }

@@ -74,7 +74,7 @@ pnpm deploy                   # API를 먼저, 웹을 그다음에 올립니다
 
    ```sh
    pnpm exec cf turnstile widgets create --name anyq --widget-mode managed \
-     --domains anyq-web.<계정>.workers.dev --domains localhost
+     --domains anyq-web.<계정>.workers.dev
    ```
 
 2. `apps/api/cloudflare.config.ts`의 `TURNSTILE_SITEKEY` 값을 방금 받은 `sitekey`로 바꿉니다.
@@ -83,6 +83,8 @@ pnpm deploy                   # API를 먼저, 웹을 그다음에 올립니다
    ```json
    { "TURNSTILE_SECRET": "<secret>" }
    ```
+
+   로컬(`cf dev`)은 항상 통과하는 Turnstile 테스트 키를 쓰므로 위젯에 `localhost`를 넣지 않습니다.
 
 4. 비밀 키와 함께 배포합니다. 한 번 올린 뒤에는 `pnpm deploy:api`만 해도 유지됩니다.
 
