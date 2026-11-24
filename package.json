@@ -4,25 +4,44 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
-		"dev:api": "pnpm --filter @anyq/api dev",
-		"dev:web": "pnpm --filter @anyq/web dev",
-		"build": "pnpm -r build",
+		"dev": "wrangler types && astro dev",
+		"build": "wrangler types && astro build",
+		"preview": "astro preview",
+		"deploy": "pnpm build && wrangler deploy",
 		"test": "pnpm --filter @anyq/api test",
-		"typecheck": "pnpm -r typecheck",
-		"deploy:api": "pnpm --filter @anyq/api run deploy",
-		"deploy:web": "pnpm --filter @anyq/web run deploy",
+		"typecheck": "wrangler types && tsc --noEmit && tsc --noEmit -p tsconfig.server.json && pnpm --filter \"./packages/*\" --filter @anyq/e2e typecheck",
 		"format": "vp fmt",
 		"lint": "vp lint",
-		"e2e": "pnpm --filter @anyq/e2e test",
-		"deploy": "pnpm deploy:api && pnpm deploy:web"
+		"e2e": "pnpm --filter @anyq/e2e test"
+	},
+	"dependencies": {
+		"@anyq/api": "workspace:*",
+		"@anyq/protocol": "workspace:*",
+		"@astrojs/cloudflare": "^14.4.9",
+		"@astrojs/preact": "^6.1.6",
+		"@preact/signals": "^2.11.4",
+		"astro": "^7.4.13",
+		"preact": "^11.2.0",
+		"qrcode-generator": "^2.0.4"
 	},
 	"devDependencies": {
 		"typescript": "^7.0.2",
 		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vite-plus": "1.4.0"
+		"vite-plus": "1.4.0",
+		"wrangler": "latest"
 	},
 	"engines": {
 		"node": "^22.23.0 || ^24.22.0 || ^26.12.0"
 	},
-	"packageManager": "pnpm@12.14.0"
+	"packageManager": "pnpm@12.14.0",
+	"cloudflare": {
+		"bindings": {
+			"TURNSTILE_SITEKEY": {
+				"description": "Optional. [Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile) site key. The default is a test key that always passes."
+			},
+			"TURNSTILE_SECRET": {
+				"description": "Optional. Turnstile secret key matching the site key. The default is a test key that always passes."
+			}
+		}
+	}
 }

@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// 실제 브라우저로 흐름을 확인한다. 먼저 `pnpm dev:api`와 `pnpm dev:web`을 띄워 둔다.
+// 실제 브라우저로 흐름을 확인한다. 먼저 `pnpm dev`를 띄워 둔다.
 // API는 Workers AI에 원격으로 붙으므로 `cf auth login`이 되어 있어야 한다.
 export default defineConfig({
 	testDir: "tests",

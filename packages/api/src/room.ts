@@ -696,7 +696,7 @@ function unit(v: number[]): Float32Array {
 
 function dot(a: Float32Array, b: Float32Array): number {
 	let s = 0;
-	for (let i = 0; i < a.length && i < b.length; i++) s += a[i] * b[i];
+	for (let i = 0; i < a.length && i < b.length; i++) s += a[i]! * b[i]!;
 	return s;
 }
 

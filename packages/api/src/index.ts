@@ -42,13 +42,16 @@ async function keyHash(header: string | undefined): Promise<string | null> {
 	return key ? sha256(key) : null;
 }
 
+/** Turnstile은 선택 사항이라 설정 파일이 아니라 비밀 값으로 받는다. */
+const turnstile = env as { TURNSTILE_SITEKEY?: string; TURNSTILE_SECRET?: string };
+
 /** Turnstile 토큰을 확인한다. 비밀 키가 없는 배포에서는 검증하지 않는다. */
 async function human(token: string | undefined, ip: string | undefined): Promise<boolean> {
-	if (!env.TURNSTILE_SECRET) return true;
+	if (!turnstile.TURNSTILE_SECRET) return true;
 	if (!token) return false;
 	const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
 		method: "POST",
-		body: JSON.stringify({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }),
+		body: JSON.stringify({ secret: turnstile.TURNSTILE_SECRET, response: token, remoteip: ip }),
 		headers: { "content-type": "application/json" },
 	});
 	return res.ok && (await res.json<{ success: boolean }>()).success === true;
@@ -57,7 +60,7 @@ async function human(token: string | undefined, ip: string | undefined): Promise
 const v1 = new Hono<App>()
 	.use(actor)
 	.get("/config", (c) =>
-		c.json<Config>({ sitekey: env.TURNSTILE_SECRET ? env.TURNSTILE_SITEKEY : "" }),
+		c.json<Config>({ sitekey: (turnstile.TURNSTILE_SECRET && turnstile.TURNSTILE_SITEKEY) || "" }),
 	)
 	.post(
 		"/rooms",

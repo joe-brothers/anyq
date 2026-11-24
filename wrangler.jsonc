@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "anyq",
+	"main": "./src/worker.ts",
+	"compatibility_date": "2026-11-17",
+	"assets": { "binding": "ASSETS", "directory": "./dist" },
+	"observability": { "enabled": true },
+	// 비슷한 질문 묶기와 새 질문 확인
+	"ai": { "binding": "AI" },
+	// 방마다 인스턴스 하나. default 네임스페이스는 계정마다 이미 있다.
+	"ai_search_namespaces": [{ "binding": "AI_SEARCH", "namespace": "default", "remote": true }],
+	// 방 Durable Object(Room). 코드에서는 ctx.exports.Room으로 찾는다.
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+	// Turnstile 키(TURNSTILE_SITEKEY, TURNSTILE_SECRET)는 비밀 값으로 넣는다. 없으면 검증하지 않는다.
+}

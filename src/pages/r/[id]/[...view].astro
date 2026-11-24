@@ -13,7 +13,7 @@ const role =
 let found = role !== null && ROOM_ID.test(id);
 let failed = false;
 if (found) {
-	const res = await toApi(new Request(new URL("/api/v1/rooms/" + id, Astro.url)));
+	const res = await toApi(new Request(new URL("/api/v1/rooms/" + id, Astro.url)), Astro.locals.cfContext);
 	if (res.status === 404) found = false;
 	else if (!res.ok) failed = true;
 }

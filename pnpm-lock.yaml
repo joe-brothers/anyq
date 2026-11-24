@@ -169,59 +169,13 @@ overrides:
 importers:
 
   .:
-    devDependencies:
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-      vite:
-        specifier: npm:@voidzero-dev/vite-plus-core@1.4.0
-        version: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-      vite-plus:
-        specifier: 1.4.0
-        version: 1.4.0(@astrojs/compiler-rs@0.5.3)(@types/node@24.19.2)(@vitest/ui@5.0.5)(esbuild@0.28.2)(playwright@1.65.1)(typescript@7.0.2)(yaml@2.9.1)
-
-  apps/api:
     dependencies:
+      '@anyq/api':
+        specifier: workspace:*
+        version: link:packages/api
       '@anyq/protocol':
         specifier: workspace:*
-        version: link:../../packages/protocol
-      '@hono/valibot-validator':
-        specifier: ^0.6.2
-        version: 0.6.2(hono@4.13.20)(valibot@1.5.0(typescript@7.0.2))
-      hono:
-        specifier: ^4.13.20
-        version: 4.13.20
-      valibot:
-        specifier: ^1.5.0
-        version: 1.5.0(typescript@7.0.2)
-    devDependencies:
-      '@cloudflare/vite-plugin':
-        specifier: ^2.0.0-rc.0
-        version: 2.0.0-rc.2(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))(workerd@1.20261118.1)
-      '@cloudflare/vitest-plugin':
-        specifier: ^1.8.3
-        version: 1.8.5(@types/node@24.19.2)(vitest@5.0.5)
-      cf:
-        specifier: ^1.0.0-rc.2
-        version: 1.0.0-rc.2(@types/node@24.19.2)
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-      vite:
-        specifier: npm:@voidzero-dev/vite-plus-core@1.4.0
-        version: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-      vite-plus:
-        specifier: 1.4.0
-        version: 1.4.0(@astrojs/compiler-rs@0.5.3)(@types/node@24.19.2)(@vitest/ui@5.0.5)(esbuild@0.28.2)(playwright@1.65.1)(typescript@7.0.2)(yaml@2.9.1)
-      vitest:
-        specifier: 5.0.5
-        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))
-
-  apps/web:
-    dependencies:
-      '@anyq/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
+        version: link:packages/protocol
       '@astrojs/cloudflare':
         specifier: ^14.4.9
         version: 14.4.9(@types/node@24.19.2)(astro@7.4.13(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))(esbuild@0.28.2)(typescript@7.0.2)(workerd@1.20261119.1)(wrangler@4.166.0(@types/node@24.19.2)(vitest@5.0.5))(yaml@2.9.1)
@@ -244,6 +198,12 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@1.4.0
+        version: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
+      vite-plus:
+        specifier: 1.4.0
+        version: 1.4.0(@astrojs/compiler-rs@0.5.3)(@types/node@24.19.2)(@vitest/ui@5.0.5)(esbuild@0.28.2)(playwright@1.65.1)(typescript@7.0.2)(yaml@2.9.1)
       wrangler:
         specifier: latest
         version: 4.166.0(@types/node@24.19.2)(vitest@5.0.5)
@@ -259,6 +219,40 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+
+  packages/api:
+    dependencies:
+      '@anyq/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hono/valibot-validator':
+        specifier: ^0.6.2
+        version: 0.6.2(hono@4.13.20)(valibot@1.5.0(typescript@7.0.2))
+      hono:
+        specifier: ^4.13.20
+        version: 4.13.20
+      valibot:
+        specifier: ^1.5.0
+        version: 1.5.0(typescript@7.0.2)
+    devDependencies:
+      '@cloudflare/vitest-plugin':
+        specifier: ^1.8.3
+        version: 1.8.5(@types/node@24.19.2)(vitest@5.0.5)
+      cf:
+        specifier: ^1.0.0-rc.2
+        version: 1.0.0-rc.2(@types/node@24.19.2)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@1.4.0
+        version: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
+      vite-plus:
+        specifier: 1.4.0
+        version: 1.4.0(@astrojs/compiler-rs@0.5.3)(@types/node@24.19.2)(@vitest/ui@5.0.5)(esbuild@0.28.2)(playwright@1.65.1)(typescript@7.0.2)(yaml@2.9.1)
+      vitest:
+        specifier: 5.0.5
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))
 
   packages/protocol:
     dependencies:
@@ -559,14 +553,8 @@ packages:
   '@cloudflare/build-output-utils@1.0.0-rc.1':
     resolution: {integrity: sha512-IrzZL1UEdVMZPRarrKu2VpnL3MIeNVhCItTebB88SwQ1YJ4mLAe1kQtXmIH7MpdgDYnxAsTZXMtuw9q5jRWCcw==}
 
-  '@cloudflare/build-output-utils@1.0.0-rc.2':
-    resolution: {integrity: sha512-Zsb0038d2RucgLTj7eyYsErtIY+H7Gdz+hAImZmR+x0pKm0fMpBRMkGPZ26g0rukHl+1A6AnX3BcUf9mXPl7+w==}
-
   '@cloudflare/config@1.0.0-rc.1':
     resolution: {integrity: sha512-NQgB+fQbk8IU0iJ6/G9LCSQjJ7JuyRn5CALrPKnQ8vxqayOJlX+av9adhLCMYBeC80ocncW1Gy7quv00uLV3LQ==}
-
-  '@cloudflare/config@1.0.0-rc.2':
-    resolution: {integrity: sha512-VsBIR9r9X6V7x/BNsHHuEdTNYaJZ9tGm5gZPZGgmpshgzC1CKnw50KLbZGpbKJa8dC1N1nQbynMxYdxlHGCpOw==}
 
   '@cloudflare/kv-asset-handler@0.5.1':
     resolution: {integrity: sha512-48OysfSW3MkQY1XjkhkpPkgrEkOvgfoyHzA2eyX5wpzFpijC02uWigv3hkNdJdT3C7ybW/U17yYHXeR68pLeww==}
@@ -574,9 +562,6 @@ packages:
 
   '@cloudflare/runtime-types@0.1.30':
     resolution: {integrity: sha512-p68T70lDZT7Vyv5c2SDzB0uqVRVCtj/3WMgXVQESnWVyTybcCwXRM9Ekmh2rQ+aPGhtIWiACvd8pX2yGA9Z5mw==}
-
-  '@cloudflare/runtime-types@0.1.31':
-    resolution: {integrity: sha512-5swDxzRxbdVYF8/5NGqVqDdEsi/0K591OAQNBS0ijymlRVy7ddUws0Pn7L8bNF7liSg1xUnuN3m469He/S0CjA==}
 
   '@cloudflare/unenv-preset@2.16.2':
     resolution: {integrity: sha512-JBP1+Z7ZSNG/d4mRP+y8VC5dka3tZVMLEZRvS+rzQ4DGV1EoxRFQckcJTTkXbHSQiTj0DtNI01Zwb/V2fX0mvQ==}
@@ -592,11 +577,6 @@ packages:
     peerDependencies:
       vite: ^6.1.0 || ^7.0.0 || ^8.0.0
       wrangler: ^4.164.0
-
-  '@cloudflare/vite-plugin@2.0.0-rc.2':
-    resolution: {integrity: sha512-edzqbA9qzCZznJft1v30g2kb4FgtUqYU95DPWSyicfvAXmJU+CLszQShBZI2ScYeLKzquMyvbwDp7S7efLsUjw==}
-    peerDependencies:
-      vite: ^7.0.0 || ^8.0.0
 
   '@cloudflare/vitest-plugin@1.8.5':
     resolution: {integrity: sha512-Vw9huwiVHQSBPoxY8diG00ET7rm3DzKfQ6lZLgPE5odjTloEH/6OITJKste3tLEr9+nie7XI1q3IKzN6B49UYQ==}
@@ -3227,6 +3207,11 @@ packages:
 
   vitefu@1.1.4:
     resolution: {integrity: sha512-qbEIDswfXH3x3IYRMScl/bf1AVW0dn7Z8qkr7g7nohkusfuC7tcFa7t5EoTOz60AunosLM9sDrDjHxsX+Up+CQ==}
+    peerDependencies:
+      vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    peerDependenciesMeta:
+      vite:
+        optional: true
 
   vitest@5.0.5:
     resolution: {integrity: sha512-cPODOMF8YnkiiYtDdHo6n4wWmBrOBBbOIYH2d33M4l3CdNn72h+qMmO6uXffUN6A5AZFXNND/d+krS9mgkXRfg==}
@@ -3553,7 +3538,7 @@ snapshots:
       rolldown: 1.2.19
       smol-toml: 1.9.1
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-      zod: 4.6.6
+      zod: 4.6.7
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -3746,15 +3731,7 @@ snapshots:
     dependencies:
       '@cloudflare/config': 1.0.0-rc.1
 
-  '@cloudflare/build-output-utils@1.0.0-rc.2':
-    dependencies:
-      '@cloudflare/config': 1.0.0-rc.2
-
   '@cloudflare/config@1.0.0-rc.1':
-    dependencies:
-      zod: 4.6.6
-
-  '@cloudflare/config@1.0.0-rc.2':
     dependencies:
       zod: 4.6.6
 
@@ -3764,16 +3741,6 @@ snapshots:
     dependencies:
       miniflare: 5.20261117.0-beta(@types/node@24.19.2)
       workerd: 1.20261117.1
-    transitivePeerDependencies:
-      - '@types/node'
-      - bufferutil
-      - kerberos
-      - utf-8-validate
-
-  '@cloudflare/runtime-types@0.1.31(@types/node@24.19.2)':
-    dependencies:
-      miniflare: 5.20261118.0-beta(@types/node@24.19.2)
-      workerd: 1.20261118.1
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -3800,23 +3767,6 @@ snapshots:
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
       wrangler: 4.166.0(@types/node@24.19.2)(vitest@5.0.5)
       ws: 8.22.0
-    transitivePeerDependencies:
-      - '@types/node'
-      - bufferutil
-      - kerberos
-      - utf-8-validate
-      - workerd
-
-  '@cloudflare/vite-plugin@2.0.0-rc.2(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))(workerd@1.20261118.1)':
-    dependencies:
-      '@cloudflare/build-output-utils': 1.0.0-rc.2
-      '@cloudflare/config': 1.0.0-rc.2
-      '@cloudflare/runtime-types': 0.1.31(@types/node@24.19.2)
-      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261118.1)
-      miniflare: 5.20261118.0-beta(@types/node@24.19.2)
-      unenv: 2.0.0-rc.24
-      vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-      ws: 8.21.0
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -4609,7 +4559,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 24.19.2
       form-data: 4.0.6
 
   '@types/node@18.19.130':
@@ -4922,7 +4872,7 @@ snapshots:
       unstorage: 1.17.6
       verkit: 0.5.0
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-      vitefu: 1.1.4(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)
+      vitefu: 1.1.4(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1))
       xxhash-wasm: 1.1.0
       zod: 4.6.7
     optionalDependencies:
@@ -6090,31 +6040,9 @@ snapshots:
       stack-trace: 1.0.0
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
 
-  vitefu@1.1.4(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1):
-    dependencies:
+  vitefu@1.1.4(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)):
+    optionalDependencies:
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)'
-    transitivePeerDependencies:
-      - '@arethetypeswrong/core'
-      - '@types/node'
-      - '@typescript/native-preview'
-      - '@vitejs/devtools'
-      - '@volar/typescript'
-      - '@vue/language-core'
-      - esbuild
-      - jiti
-      - less
-      - publint
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
-      - tsx
-      - typescript
-      - unplugin-unused
-      - unrun
-      - vue-tsc
-      - yaml
 
   vitest@5.0.5(@types/node@24.19.2)(@vitest/browser-preview@5.0.5)(@vitest/ui@5.0.5)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(typescript@7.0.2)(yaml@2.9.1)):
     dependencies:
