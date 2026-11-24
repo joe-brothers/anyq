@@ -68,7 +68,8 @@ test("질문, 추천, 답변 공개가 화면마다 전달된다", async ({ page
 	await expect(screen.locator("#qs > li").first()).toHaveClass(/live/);
 
 	// 프로젝터의 이름은 발표자가 끌 수 있다. 청중 화면에는 남는다.
-	await page.getByRole("button", { name: "프로젝터에 이름" }).click();
+	await page.getByRole("button", { name: "방 옵션" }).click();
+	await page.getByRole("switch", { name: "프로젝터에 이름" }).click();
 	await expect(screen.locator(".by")).toHaveCount(0);
 	await expect(a.locator(".by")).toHaveText("철수");
 });
@@ -77,11 +78,9 @@ test("확인 후 표시를 켜면 발표자가 연 질문만 나온다", async (
 	const { id, token } = await createRoom(page);
 	await page.goto(`/r/${id}/host#k=${token}`);
 	const a = await visitor(browser, `/r/${id}`);
-	await page.getByRole("button", { name: "확인 후 표시" }).click();
-	await expect(page.getByRole("button", { name: "확인 후 표시" })).toHaveAttribute(
-		"aria-pressed",
-		"true",
-	);
+	await page.getByRole("button", { name: "방 옵션" }).click();
+	await page.getByRole("switch", { name: "확인 후 표시" }).click();
+	await expect(page.getByRole("switch", { name: "확인 후 표시" })).toBeChecked();
 
 	await ask(a, "로그인해야 하나요?");
 	await expect(a.getByText("발표자가 확인하면 표시됩니다.")).toBeVisible();

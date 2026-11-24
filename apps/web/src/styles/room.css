@@ -70,10 +70,65 @@
 	color: var(--dim);
 	font-size: 0.875rem;
 }
-.btn[aria-pressed="true"] {
-	background: var(--lit);
-	color: var(--ground);
+.drop[data-over] {
+	outline: 2px dashed var(--lit);
+	outline-offset: -2px;
+}
+.panel ul.err {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	overflow-wrap: anywhere;
+}
+.opts {
+	list-style: none;
+	margin: 0.5rem 0 0;
+	padding: 0 1.25rem;
+	background: var(--raised);
+}
+.opts li + li {
+	border-top: 1px solid var(--line);
+}
+.switch {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+	min-height: 44px;
+	padding: 0.9rem 0;
+	border: 0;
+	background: none;
+	color: var(--lit);
+	font: inherit;
+	text-align: start;
+}
+.switch b,
+.switch .note {
+	display: block;
+}
+.track {
+	flex: none;
+	width: 2.5rem;
+	height: 1.5rem;
+	padding: 2px;
+	border: 1px solid var(--dim);
+}
+.track::before {
+	content: "";
+	display: block;
+	width: 1.125rem;
+	height: 100%;
+	background: var(--dim);
+	transition: transform 0.12s;
+}
+.switch[aria-checked="true"] .track {
 	border-color: var(--lit);
+	background: var(--lit);
+}
+.switch[aria-checked="true"] .track::before {
+	background: var(--ground);
+	transform: translateX(0.875rem);
 }
 .keys {
 	margin: 0.5rem 0;

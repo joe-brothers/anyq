@@ -4,7 +4,6 @@ import { useEffect } from "preact/hooks";
 import { getLang } from "../client/ui.ts";
 import { Icon } from "./Icon.tsx";
 import {
-	drafts,
 	expires,
 	fileItems,
 	fileNote,
@@ -29,7 +28,8 @@ export function Panels() {
 	const audience = location.origin + "/r/" + roomId;
 	const copy = useSignal<[string, string]>(["copy", "copy"]);
 	const uploading = useSignal<string | null>(null);
-	const fileErr = useSignal<string | null>(null);
+	const fileErrs = useSignal<[string, string][]>([]);
+	const over = useSignal(false);
 
 	const onCopy = async () => {
 		try {
@@ -40,18 +40,52 @@ export function Panels() {
 		}
 		setTimeout(() => (copy.value = ["copy", "copy"]), 2000);
 	};
-	const onFile = async (e: Event) => {
-		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		fileErr.value = null;
-		if (!FILE_TYPES.test(file.name)) return void (fileErr.value = "up.415");
-		if (file.size > LIMITS.fileBytes) return void (fileErr.value = "up.413");
-		uploading.value = file.name;
-		fileErr.value = await upload(file);
-		input.value = "";
+	const add = async (list: File[]) => {
+		if (uploading.value || !list.length) return;
+		const errs: [string, string][] = [];
+		fileErrs.value = errs;
+		for (const [i, file] of list.entries()) {
+			uploading.value = list.length > 1 ? `${file.name} (${i + 1}/${list.length})` : file.name;
+			const err = !FILE_TYPES.test(file.name)
+				? "up.415"
+				: file.size > LIMITS.fileBytes
+					? "up.413"
+					: await upload(file);
+			if (err) fileErrs.value = [...fileErrs.value, [file.name, err]];
+		}
 		uploading.value = null;
 	};
+	const onFile = (e: Event) => {
+		const input = e.currentTarget as HTMLInputElement;
+		const list = [...(input.files ?? [])];
+		input.value = "";
+		void add(list);
+	};
+	const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes("Files");
+	const onDrag = (e: DragEvent) => {
+		if (!hasFiles(e)) return;
+		e.preventDefault();
+		over.value = true;
+	};
+	const onLeave = (e: DragEvent) => {
+		if (!(e.currentTarget as Node).contains(e.relatedTarget as Node | null)) over.value = false;
+	};
+	const onDrop = (e: DragEvent) => {
+		if (!hasFiles(e)) return;
+		e.preventDefault();
+		over.value = false;
+		void add([...e.dataTransfer!.files]);
+	};
+	// 패널을 빗나간 파일을 브라우저가 열어 발표자 화면을 떠나지 않게 한다.
+	useEffect(() => {
+		const stop = (e: DragEvent) => hasFiles(e) && e.preventDefault();
+		addEventListener("dragover", stop);
+		addEventListener("drop", stop);
+		return () => {
+			removeEventListener("dragover", stop);
+			removeEventListener("drop", stop);
+		};
+	}, []);
 
 	return (
 		<div class="panels">
@@ -79,7 +113,15 @@ export function Panels() {
 				)}
 			</section>
 
-			<section class="panel" aria-labelledby="mat-h">
+			<section
+				class="panel drop"
+				aria-labelledby="mat-h"
+				data-over={over.value || undefined}
+				onDragEnter={onDrag}
+				onDragOver={onDrag}
+				onDragLeave={onLeave}
+				onDrop={onDrop}
+			>
 				<h2 id="mat-h">{tr("mat.h")}</h2>
 				<div class="row">
 					<label class="btn" for="file" id="file-label">
@@ -91,15 +133,20 @@ export function Panels() {
 						id="file"
 						type="file"
 						accept=".pdf,.txt,.md"
+						multiple
 						disabled={!!uploading.value}
 						onChange={onFile}
 					/>
-					<span class="note">{tr("mat.hint")}</span>
+					<span class="note">{tr(over.value ? "mat.drop" : "mat.hint")}</span>
 				</div>
-				{fileErr.value && (
-					<p class="err" role="alert">
-						{tr(fileErr.value)}
-					</p>
+				{fileErrs.value.length > 0 && (
+					<ul class="err" role="alert">
+						{fileErrs.value.map(([name, err]) => (
+							<li key={name}>
+								{name}: {tr(err)}
+							</li>
+						))}
+					</ul>
 				)}
 				<ul class="files">
 					{fileItems.value.map((f) => (
@@ -123,50 +170,12 @@ export function Panels() {
 	);
 }
 
-/** 질문과 공개한 답변을 Markdown으로 내려받는다. */
-function exportMd() {
-	const all = [...qs.value.values()]
-		.filter((q) => q.status !== "hidden")
-		.sort((a, b) => b.votes - a.votes || a.id - b.id);
-	const kind = (id: number) => {
-		const d = drafts.value.get(id);
-		return d?.approved ? "answered" : d?.status === "none" ? "missing" : "rest";
-	};
-	const by = (name?: string) => (name ? " — " + name : "");
-	const out = ["# " + tr("title.room", roomId), ""];
-	for (const sec of ["answered", "missing", "rest"]) {
-		const rows = all.filter((q) => kind(q.id) === sec);
-		if (!rows.length) continue;
-		out.push("## " + tr("ex." + sec), "");
-		for (const q of rows) {
-			out.push("- " + q.text + by(q.name) + " (" + tr("ex.votes", q.votes) + ")");
-			for (const s of q.similar ?? []) out.push("  - " + s.text + by(s.name));
-			if (sec === "answered")
-				out.push("", "  " + drafts.value.get(q.id)!.text.replace(/\n/g, "\n  "), "");
-		}
-		out.push("");
-	}
-	const a = document.createElement("a");
-	a.href = URL.createObjectURL(new Blob([out.join("\n")], { type: "text/markdown" }));
-	a.download = "anyq-" + roomId + ".md";
-	a.click();
-	URL.revokeObjectURL(a.href);
-}
+const OPTS = ["review", "names"] as const;
 
-/** 질문 수, 방 옵션, 내보내기 */
+/** 질문 수와 방 옵션 */
 export function Bar() {
 	const list = shown.value;
-	const toggle = (key: "review" | "names", ic: [string, string]) => (
-		<button
-			class="btn"
-			type="button"
-			aria-pressed={opts.value[key]}
-			onClick={() => send({ t: "opt", key, on: !opts.value[key] })}
-		>
-			<Icon name={opts.value[key] ? ic[0] : ic[1]} />
-			{tr(key === "review" ? "review" : "opt.names")}
-		</button>
-	);
+	const open = useSignal(false);
 	return (
 		<>
 			<div class="bar">
@@ -174,13 +183,40 @@ export function Bar() {
 					{list.length > 0 &&
 						tr("total", list.length, list.filter((q) => q.status === "done").length)}
 				</p>
-				{toggle("review", ["lock", "eye"])}
-				{toggle("names", ["eye", "eyeoff"])}
-				<button class="btn" type="button" onClick={exportMd}>
-					<Icon name="download" />
-					{tr("export")}
+				<button
+					class="btn"
+					type="button"
+					aria-expanded={open.value}
+					aria-controls="opts"
+					onClick={() => (open.value = !open.value)}
+				>
+					<Icon name="sliders" />
+					{tr("opt.h")}
 				</button>
 			</div>
+			<ul class="opts" id="opts" hidden={!open.value}>
+				{OPTS.map((key) => (
+					<li key={key}>
+						<button
+							class="switch"
+							type="button"
+							role="switch"
+							aria-checked={opts.value[key]}
+							aria-label={tr("opt." + key)}
+							aria-describedby={"opt-" + key}
+							onClick={() => send({ t: "opt", key, on: !opts.value[key] })}
+						>
+							<span>
+								<b>{tr("opt." + key)}</b>
+								<span class="note" id={"opt-" + key}>
+									{tr("opt." + key + ".d")}
+								</span>
+							</span>
+							<i class="track" aria-hidden="true" />
+						</button>
+					</li>
+				))}
+			</ul>
 			<p class="note keys">{tr("keys")}</p>
 		</>
 	);
