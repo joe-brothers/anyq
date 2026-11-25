@@ -21,7 +21,7 @@ import {
 	type Role,
 } from "./store.ts";
 
-/** 머리말의 연결 상태. 섬 밖에 있는 자리에 그린다. */
+/** 머리말의 방 코드와 연결 상태. 평소에는 방 코드만, 문제가 있을 때만 상태를 보인다. 섬 밖에 있는 자리에 그린다. */
 function Conn({ id }: { id: string }) {
 	const slot = document.getElementById("conn");
 	const { key, kind } = conn.value;
@@ -31,7 +31,7 @@ function Conn({ id }: { id: string }) {
 	if (!slot) return null;
 	return createPortal(
 		<>
-			<Icon name={kind === "ok" ? "check" : kind === "ing" ? "spin" : "warn"} />
+			{kind !== "ok" && <Icon name={kind === "ing" ? "spin" : "warn"} />}
 			{kind === "ok" ? (
 				<>
 					{id}
