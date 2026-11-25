@@ -131,7 +131,32 @@
 	transform: translateX(0.875rem);
 }
 .keys {
-	margin: 0.5rem 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.25rem;
+	margin: 0.75rem 0;
+	padding: 0;
+	list-style: none;
+}
+.keys li {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+}
+kbd {
+	min-width: 1.7em;
+	padding: 0.1em 0.45em;
+	border: 1px solid var(--line);
+	border-bottom-width: 2px;
+	border-radius: 4px;
+	background: var(--raised);
+	color: var(--lit);
+	font:
+		600 0.8em/1.5 ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		monospace;
+	text-align: center;
 }
 #expires:empty {
 	display: none;

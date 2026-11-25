@@ -172,6 +172,16 @@ export function Panels() {
 
 const OPTS = ["review", "names"] as const;
 
+/** 단축키 안내. 공개 키는 OS에 맞춰 적는다(동작은 둘 다 받는다). */
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+const KEYS: [string[], string][] = [
+	[["J", "K"], "key.move"],
+	[["L"], "act.live"],
+	[["D"], "act.done"],
+	[["E"], "key.write"],
+	[[MOD, "Enter"], "approve"],
+];
+
 /** 질문 수와 방 옵션 */
 export function Bar() {
 	const list = shown.value;
@@ -217,7 +227,16 @@ export function Bar() {
 					</li>
 				))}
 			</ul>
-			<p class="note keys">{tr("keys")}</p>
+			<ul class="note keys">
+				{KEYS.map(([keys, label]) => (
+					<li key={label}>
+						{keys.map((k) => (
+							<kbd key={k}>{k}</kbd>
+						))}
+						{tr(label)}
+					</li>
+				))}
+			</ul>
 		</>
 	);
 }
