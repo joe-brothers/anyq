@@ -27,7 +27,7 @@ export const drafts = signal<ReadonlyMap<number, Draft>>(new Map());
 export const files = signal(0);
 export const fileItems = signal<FileItem[]>([]);
 export const fileNote = signal<string | null>("mat.empty");
-export const opts = signal<Opts>({ review: false, names: true });
+export const opts = signal<Opts>({ review: false, names: true, auto: true });
 export const expires = signal(0);
 export const conn = signal<Conn>({ key: "conn.ing", kind: "ing" });
 /** 목록 대신 보여 줄 안내. null이면 목록을 보여 준다. */

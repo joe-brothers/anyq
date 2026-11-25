@@ -28,8 +28,8 @@ const id = v.pipe(v.number(), v.integer());
 export const StatusSchema = v.picklist(["open", "live", "done", "hidden"]);
 export type Status = v.InferOutput<typeof StatusSchema>;
 
-/** 방 옵션. review: 발표자가 연 질문만 보인다. names: 프로젝터에 이름을 띄운다. */
-export const OptKeySchema = v.picklist(["review", "names"]);
+/** 방 옵션. review: 발표자가 연 질문만 보인다. names: 프로젝터에 이름을 띄운다. auto: 거의 같은 질문을 바로 묶는다. */
+export const OptKeySchema = v.picklist(["review", "names", "auto"]);
 export type Opts = Record<v.InferOutput<typeof OptKeySchema>, boolean>;
 
 export const ClientMsgSchema = v.variant("t", [

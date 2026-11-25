@@ -136,6 +136,25 @@ it("발표자가 승인한 답만 청중에게 보인다", async () => {
 	expect((await a.next("q")).q.answer).toBeUndefined();
 });
 
+it("자동 합치기를 끄면 같은 질문도 후보로만 보여 준다", async () => {
+	const { id, token } = await createRoom();
+	const a = await connect(id, "voter-aaaa");
+	const b = await connect(id, "voter-bbbb");
+	const host = await connect(id, "voter-host", token);
+	if (!a.ws || !b.ws || !host.ws) throw new Error("연결 실패");
+	expect((await host.next("state")).opts.auto).toBe(true);
+	host.send({ t: "opt", key: "auto", on: false });
+	expect((await host.next("opts")).opts.auto).toBe(false);
+
+	a.send({ t: "ask", text: "PDF는 몇 MB까지 되나요?" });
+	const first = (await host.next("q")).q;
+	b.send({ t: "ask", text: "PDF 용량 제한이 있나요?" });
+	let second = (await host.next("q")).q;
+	while (!second.near) second = (await host.next("q")).q;
+	expect(second.near).toMatchObject({ id: first.id });
+	expect(second.similar).toBeUndefined();
+});
+
 it("비슷한 질문을 묶고, 발표자가 분리하고 숨김을 되돌린다", async () => {
 	const { id, token } = await createRoom();
 	const a = await connect(id, "voter-aaaa");

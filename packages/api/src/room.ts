@@ -51,7 +51,7 @@ const BACKFILL = 50;
 const GUARD = "@cf/meta/llama-guard-3-8b";
 const MODEL = "@cf/openai/gpt-oss-120b";
 const EMBED = "@cf/baai/bge-m3";
-/** 코사인 유사도. AUTO 이상이면 바로 묶고, NEAR 이상이면 발표자에게 후보로 보여 준다. */
+/** 코사인 유사도. AUTO 이상이면 바로 묶고(방 옵션 auto), NEAR 이상이면 발표자에게 후보로 보여 준다. */
 const AUTO = 0.9;
 const NEAR = 0.7;
 const SYSTEM = [
@@ -165,7 +165,11 @@ export class Room extends DurableObject<Cloudflare.Env> {
 	}
 
 	private opts(): Opts {
-		return { review: this.meta("review") === "1", names: this.meta("names") !== "0" };
+		return {
+			review: this.meta("review") === "1",
+			names: this.meta("names") !== "0",
+			auto: this.meta("auto") !== "0",
+		};
 	}
 
 	/** 자료가 하나 올라왔다. */
@@ -403,7 +407,8 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			if (!best) return false;
 			console.log(JSON.stringify({ msg: "similar", qid: id, to: best.id, score }));
 			if (score < NEAR) return false;
-			if (score >= AUTO && (best.status === "open" || best.status === "live")) {
+			const auto = this.opts().auto && score >= AUTO;
+			if (auto && (best.status === "open" || best.status === "live")) {
 				this.sql.exec("UPDATE q SET grp = ? WHERE id = ?", best.rep, id);
 				this.broadcast({ t: "del", id });
 				this.publish(best.rep);

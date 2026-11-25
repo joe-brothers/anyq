@@ -170,7 +170,7 @@ export function Panels() {
 	);
 }
 
-const OPTS = ["review", "names"] as const;
+const OPTS = ["review", "names", "auto"] as const;
 
 /** 단축키 안내. 공개 키는 OS에 맞춰 적는다(동작은 둘 다 받는다). */
 const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
