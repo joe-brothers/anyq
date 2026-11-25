@@ -380,6 +380,11 @@ kbd {
 	padding: 0.75rem;
 	border: 1px dashed var(--dim);
 }
+/* 따로 두기로 한 후보는 상자 없이 한 줄로 남긴다. */
+.near[data-kept] {
+	padding: 0;
+	border: 0;
+}
 .near b {
 	color: var(--lit);
 }

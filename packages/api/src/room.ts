@@ -25,6 +25,7 @@ type QRow = {
 	status: Status;
 	grp: number | null;
 	near: number | null;
+	kept: number;
 	voter: string;
 	atext: string | null;
 	asrc: string | null;
@@ -93,6 +94,8 @@ const MIGRATIONS = [
 		ip TEXT NOT NULL,
 		at INTEGER NOT NULL
 	) WITHOUT ROWID;`,
+	// 따로 두기로 한 후보. 지우지 않고 접어 두어 나중에 합칠 수 있게 한다.
+	`ALTER TABLE q ADD COLUMN kept INTEGER NOT NULL DEFAULT 0`,
 ];
 
 export class Room extends DurableObject<Cloudflare.Env> {
@@ -311,7 +314,7 @@ export class Room extends DurableObject<Cloudflare.Env> {
 	private questions(host: boolean): Question[] {
 		const rows = this.sql
 			.exec<QRow>(
-				`SELECT q.id, q.text, q.name, q.status, q.grp, q.near, q.voter, d.text AS atext, d.sources AS asrc
+				`SELECT q.id, q.text, q.name, q.status, q.grp, q.near, q.kept, q.voter, d.text AS atext, d.sources AS asrc
 				FROM q LEFT JOIN draft d ON d.qid = q.id AND d.approved = 1 ORDER BY q.id`,
 			)
 			.toArray();
@@ -351,7 +354,12 @@ export class Room extends DurableObject<Cloudflare.Env> {
 				const near = host && r.near !== null ? byId.get(r.near) : undefined;
 				const target = near && byId.get(rep(near));
 				if (near && target && target.id !== r.id && target.status !== "hidden")
-					q.near = { id: target.id, text: near.text, ...(near.name ? { name: near.name } : {}) };
+					q.near = {
+						id: target.id,
+						text: near.text,
+						...(near.name ? { name: near.name } : {}),
+						...(r.kept ? { kept: true as const } : {}),
+					};
 				return q;
 			});
 	}
@@ -575,7 +583,7 @@ export class Room extends DurableObject<Cloudflare.Env> {
 				.exec<{ grp: number | null }>("SELECT grp FROM q WHERE id = ?", id)
 				.toArray()[0]?.grp;
 			if (old == null) return;
-			this.sql.exec("UPDATE q SET grp = NULL, near = NULL WHERE id = ?", id);
+			this.sql.exec("UPDATE q SET grp = NULL, near = NULL, kept = 0 WHERE id = ?", id);
 			this.publish(id);
 			return this.publish(old);
 		}
@@ -628,13 +636,17 @@ export class Room extends DurableObject<Cloudflare.Env> {
 		if (msg.t === "merge") {
 			const into = all.find((x) => x.id === msg.into);
 			if (!into || into.id === id || into.status === "hidden") return;
-			this.sql.exec("UPDATE q SET grp = ?1, near = NULL WHERE id = ?2 OR grp = ?2", into.id, id);
+			this.sql.exec(
+				"UPDATE q SET grp = ?1, near = NULL, kept = 0 WHERE id = ?2 OR grp = ?2",
+				into.id,
+				id,
+			);
 			this.broadcast({ t: "del", id });
 			return this.publish(into.id);
 		}
 
 		if (msg.t === "keep") {
-			this.sql.exec("UPDATE q SET near = NULL WHERE id = ?", id);
+			this.sql.exec("UPDATE q SET kept = 1 WHERE id = ?", id);
 			return this.publish(id);
 		}
 

@@ -153,6 +153,13 @@ it("자동 합치기를 끄면 같은 질문도 후보로만 보여 준다", asy
 	while (!second.near) second = (await host.next("q")).q;
 	expect(second.near).toMatchObject({ id: first.id });
 	expect(second.similar).toBeUndefined();
+
+	// 따로 두어도 후보는 남아서 나중에 합칠 수 있다.
+	host.send({ t: "keep", id: second.id });
+	expect((await host.next("q")).q.near).toMatchObject({ id: first.id, kept: true });
+	host.send({ t: "merge", id: second.id, into: first.id });
+	expect((await host.next("del")).id).toBe(second.id);
+	expect((await host.next("q")).q.similar).toMatchObject([{ id: second.id }]);
 });
 
 it("비슷한 질문을 묶고, 발표자가 분리하고 숨김을 되돌린다", async () => {

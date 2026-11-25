@@ -89,7 +89,7 @@ export function Item({ q }: { q: Question }) {
 				</details>
 			)}
 			{role === "host" && !hiddenQ && q.near && (
-				<div class="near">
+				<div class="near" data-kept={q.near.kept}>
 					<p>
 						<b>{tr("near")}</b> {q.near.text}
 					</p>
@@ -102,10 +102,12 @@ export function Item({ q }: { q: Question }) {
 							<Icon name="merge" />
 							{tr("merge")}
 						</button>
-						<button type="button" class="btn" onClick={() => send({ t: "keep", id: q.id })}>
-							<Icon name="split" />
-							{tr("keep")}
-						</button>
+						{!q.near.kept && (
+							<button type="button" class="btn" onClick={() => send({ t: "keep", id: q.id })}>
+								<Icon name="split" />
+								{tr("keep")}
+							</button>
+						)}
 					</div>
 				</div>
 			)}

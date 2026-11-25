@@ -66,7 +66,7 @@ export const CreateRoomSchema = v.object({
 
 export type Answer = { text: string; sources: string[] };
 export type Similar = { id: number; text: string; name?: string };
-/** similar: 이 질문에 묶인 비슷한 질문. near: 묶을지 발표자가 정할 후보(발표자에게만 보낸다). */
+/** similar: 이 질문에 묶인 비슷한 질문. near: 묶을지 발표자가 정할 후보(발표자에게만 보낸다). kept: 따로 두기로 했지만 나중에 합칠 수 있게 남긴 후보. */
 export type Question = {
 	id: number;
 	text: string;
@@ -75,7 +75,7 @@ export type Question = {
 	status: Status;
 	answer?: Answer;
 	similar?: Similar[];
-	near?: Similar;
+	near?: Similar & { kept?: true };
 };
 /** at: 근거가 있는 곳(가장 가까운 제목). */
 export type Source = { key: string; text: string; at?: string };
