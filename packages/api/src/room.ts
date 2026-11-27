@@ -1,4 +1,4 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, env } from "cloudflare:workers";
 import * as v from "valibot";
 import {
 	ClientMsgSchema,
@@ -44,6 +44,9 @@ const ASK_INTERVAL_MS = 5000;
 /** 한 IP에서 1분 동안. 발표장은 같은 IP를 쓰므로 넉넉하게 둔다. */
 const IP_ASKS = 20;
 const IP_VOTERS = 120;
+/** 사람 확인 한 번으로 1분 동안 올릴 수 있는 질문 수. 넘으면 다시 확인한다. */
+const PASS_ASKS = 3;
+const turnstile = env as { TURNSTILE_SECRET?: string };
 const TTL_MS = 7 * 86_400_000;
 const PENDING_MS = LIMITS.pendingMs;
 const POLL_MS = 15_000;
@@ -96,6 +99,8 @@ const MIGRATIONS = [
 	) WITHOUT ROWID;`,
 	// 따로 두기로 한 후보. 지우지 않고 접어 두어 나중에 합칠 수 있게 한다.
 	`ALTER TABLE q ADD COLUMN kept INTEGER NOT NULL DEFAULT 0`,
+	// 사람 확인을 마친 추천인
+	`CREATE TABLE pass (voter TEXT PRIMARY KEY, at INTEGER NOT NULL) WITHOUT ROWID`,
 ];
 
 export class Room extends DurableObject<Cloudflare.Env> {
@@ -165,6 +170,34 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			files: this.files(),
 			expires: Number(this.meta("expires")),
 		};
+	}
+
+	/** 사람 확인을 마친 추천인으로 적는다. 없는 방이면 false. */
+	pass(voter: string): boolean {
+		if (!this.meta("host")) return false;
+		if (turnstile.TURNSTILE_SECRET)
+			this.sql.exec("INSERT OR REPLACE INTO pass (voter, at) VALUES (?, ?)", voter, Date.now());
+		return true;
+	}
+
+	/** 질문·추천을 받아도 되면 true. 발표자와 Turnstile을 끈 배포는 확인하지 않는다. ask: 확인 뒤 질문을 몰아 올리면 확인을 무른다. */
+	private passed(who: Attachment, ask = false): boolean {
+		if (who.host || !turnstile.TURNSTILE_SECRET) return true;
+		const at = this.sql
+			.exec<{ at: number }>("SELECT at FROM pass WHERE voter = ?", who.voter)
+			.toArray()[0]?.at;
+		if (at === undefined) return false;
+		if (!ask) return true;
+		const { n } = this.sql
+			.exec<{ n: number }>(
+				"SELECT COUNT(*) AS n FROM q WHERE voter = ? AND at > ?",
+				who.voter,
+				Math.max(at, Date.now() - 60_000),
+			)
+			.one();
+		if (n < PASS_ASKS) return true;
+		this.sql.exec("DELETE FROM pass WHERE voter = ?", who.voter);
+		return false;
 	}
 
 	private opts(): Opts {
@@ -540,6 +573,9 @@ export class Room extends DurableObject<Cloudflare.Env> {
 			this.setMeta(msg.key, msg.on ? "1" : "0");
 			return this.broadcast({ t: "opts", opts: this.opts() });
 		}
+
+		if ((msg.t === "ask" || msg.t === "vote") && !this.passed(who, msg.t === "ask"))
+			return this.send(ws, { t: "err", code: "verify" });
 
 		if (msg.t === "ask") {
 			const { text } = msg;

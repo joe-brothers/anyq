@@ -100,6 +100,7 @@ function Ask() {
 					{tr("ask.submit")}
 				</button>
 			</div>
+			<div id="ts" />
 			<p class="err" id="q-err" role="alert">
 				{askErr.value && tr(askErr.value)}
 			</p>

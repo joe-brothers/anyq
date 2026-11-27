@@ -2,7 +2,7 @@
 import * as v from "valibot";
 
 /** 메시지 모양이 호환되지 않게 바뀌면 올린다. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export const LIMITS = {
 	textMin: 2,
@@ -64,6 +64,12 @@ export const CreateRoomSchema = v.object({
 	token: v.optional(v.pipe(v.string(), v.maxLength(2048))),
 });
 
+/** 질문·추천을 하기 전에 추천인을 사람으로 확인받는다. */
+export const JoinSchema = v.object({
+	token: v.optional(v.pipe(v.string(), v.maxLength(2048))),
+	voter: v.pipe(v.string(), v.regex(VOTER_ID)),
+});
+
 export type Answer = { text: string; sources: string[] };
 export type Similar = { id: number; text: string; name?: string };
 /** similar: 이 질문에 묶인 비슷한 질문. near: 묶을지 발표자가 정할 후보(발표자에게만 보낸다). kept: 따로 두기로 했지만 나중에 합칠 수 있게 남긴 후보. */
@@ -87,7 +93,8 @@ export type Draft = {
 	approved: boolean;
 };
 
-export type ErrCode = "length" | "slow" | "full" | "key" | "version";
+/** verify: 사람 확인(join)을 거친 뒤 다시 보내야 한다. */
+export type ErrCode = "length" | "slow" | "full" | "key" | "version" | "verify";
 export type ServerMsg =
 	| {
 			t: "state";

@@ -5,6 +5,7 @@ import { createMiddleware } from "hono/factory";
 import {
 	CreateRoomSchema,
 	FILE_TYPES,
+	JoinSchema,
 	LIMITS,
 	ROOM_ID,
 	instanceId,
@@ -45,8 +46,12 @@ async function keyHash(header: string | undefined): Promise<string | null> {
 /** Turnstile은 선택 사항이라 설정 파일이 아니라 비밀 값으로 받는다. */
 const turnstile = env as { TURNSTILE_SITEKEY?: string; TURNSTILE_SECRET?: string };
 
-/** Turnstile 토큰을 확인한다. 비밀 키가 없는 배포에서는 검증하지 않는다. */
-async function human(token: string | undefined, ip: string | undefined): Promise<boolean> {
+/** Turnstile 토큰을 확인한다. 비밀 키가 없는 배포에서는 검증하지 않는다. 테스트 키는 action을 돌려주지 않는다. */
+async function human(
+	token: string | undefined,
+	ip: string | undefined,
+	action: "create" | "join",
+): Promise<boolean> {
 	if (!turnstile.TURNSTILE_SECRET) return true;
 	if (!token) return false;
 	const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -54,7 +59,9 @@ async function human(token: string | undefined, ip: string | undefined): Promise
 		body: JSON.stringify({ secret: turnstile.TURNSTILE_SECRET, response: token, remoteip: ip }),
 		headers: { "content-type": "application/json" },
 	});
-	return res.ok && (await res.json<{ success: boolean }>()).success === true;
+	if (!res.ok) return false;
+	const r = await res.json<{ success: boolean; action?: string }>();
+	return r.success === true && (!r.action || r.action === action);
 }
 
 const v1 = new Hono<App>()
@@ -68,7 +75,7 @@ const v1 = new Hono<App>()
 			if (!result.success) return c.json({ error: "turnstile" }, 403);
 		}),
 		async (c) => {
-			if (!(await human(c.req.valid("json").token, c.req.header("CF-Connecting-IP"))))
+			if (!(await human(c.req.valid("json").token, c.req.header("CF-Connecting-IP"), "create")))
 				return c.json({ error: "turnstile" }, 403);
 			const token = randomToken();
 			const hash = await sha256(token);
@@ -85,6 +92,22 @@ const v1 = new Hono<App>()
 		const info = await c.var.room.check(await keyHash(c.req.header("authorization")));
 		return info ? c.json<RoomInfo>(info, 200) : c.json({ error: "not_found" }, 404);
 	})
+	// 처음 질문·추천하는 추천인을 사람으로 확인한다.
+	.post(
+		"/rooms/:id/join",
+		room,
+		vValidator("json", JoinSchema, (result, c) => {
+			if (!result.success) return c.json({ error: "turnstile" }, 403);
+		}),
+		async (c) => {
+			const { token, voter } = c.req.valid("json");
+			if (!(await human(token, c.req.header("CF-Connecting-IP"), "join")))
+				return c.json({ error: "turnstile" }, 403);
+			return (await c.var.room.pass(voter))
+				? c.body(null, 204)
+				: c.json({ error: "not_found" }, 404);
+		},
+	)
 	.get("/rooms/:id/ws", room, async (c) => {
 		if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "websocket_only" }, 426);
 		return c.var.room.fetch(c.req.raw);

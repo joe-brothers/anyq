@@ -238,3 +238,51 @@ it("이름은 선택이고, 프로젝터에 띄울지는 발표자가 정한다"
 	host.send({ t: "opt", key: "names", on: false });
 	expect((await a.next("opts")).opts.names).toBe(false);
 });
+
+it("Turnstile을 켜면 사람 확인을 마친 추천인만 질문·추천한다", async () => {
+	const { id, token } = await createRoom();
+	const secret = env as { TURNSTILE_SECRET?: string };
+	secret.TURNSTILE_SECRET = "secret";
+	const verify = vi.spyOn(globalThis, "fetch").mockImplementation((async (
+		_url: string,
+		init: RequestInit,
+	) => {
+		const ok = JSON.parse(init.body as string).response === "good";
+		return Response.json({ success: ok, action: "join" });
+	}) as never);
+	try {
+		const join = (body: object) =>
+			SELF.fetch(`${origin}/api/v1/rooms/${id}/join`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(body),
+			});
+		const a = await connect(id, "voter-aaaa");
+		const host = await connect(id, "voter-host", token);
+		if (!a.ws || !host.ws) throw new Error("연결 실패");
+
+		a.send({ t: "ask", text: "로그인해야 하나요?" });
+		expect((await a.next("err")).code).toBe("verify");
+		expect((await join({ voter: "voter-aaaa" })).status).toBe(403);
+		expect((await join({ voter: "voter-aaaa", token: "bad" })).status).toBe(403);
+		expect((await join({ voter: "voter-aaaa", token: "good" })).status).toBe(204);
+		a.send({ t: "ask", text: "로그인해야 하나요?" });
+		await a.next("asked");
+		const q = (await host.next("q")).q;
+
+		// 발표자는 확인하지 않는다. 확인하지 않은 청중은 추천도 못 한다.
+		host.send({ t: "vote", id: q.id });
+		expect((await host.next("mine")).mine).toBe(true);
+		const b = await connect(id, "voter-bbbb");
+		if (!b.ws) throw new Error("연결 실패");
+		b.send({ t: "vote", id: q.id });
+		expect((await b.next("err")).code).toBe("verify");
+
+		// 방 만들기용 토큰은 받지 않는다.
+		verify.mockImplementation((async () =>
+			Response.json({ success: true, action: "create" })) as never);
+		expect((await join({ voter: "voter-bbbb", token: "good" })).status).toBe(403);
+	} finally {
+		delete secret.TURNSTILE_SECRET;
+	}
+});

@@ -1,11 +1,6 @@
 import { ApiError, api } from "./api.ts";
+import { loadTurnstile } from "./turnstile.ts";
 import { getLang, getTheme, icon, onLang, t } from "./ui.ts";
-
-declare global {
-	interface Window {
-		turnstile?: { render(el: HTMLElement, opts: Record<string, unknown>): void };
-	}
-}
 
 type DemoQ = {
 	id: number;
@@ -144,17 +139,6 @@ async function createRoom(token?: string) {
 	}
 }
 
-// Turnstile 스크립트는 버튼을 누른 뒤에만 불러온다.
-const loadTurnstile = () =>
-	new Promise<void>((ok, fail) => {
-		if (window.turnstile) return ok();
-		const s = document.createElement("script");
-		s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-		s.onload = () => ok();
-		s.onerror = fail;
-		document.head.append(s);
-	});
-
 create.addEventListener("click", async () => {
 	busy = "verifying";
 	errKey = null;
@@ -169,6 +153,7 @@ create.addEventListener("click", async () => {
 			theme: getTheme(),
 			language: getLang(),
 			appearance: "interaction-only",
+			action: "create",
 			callback: createRoom,
 			"error-callback": () => idle("err.turnstile"),
 		});

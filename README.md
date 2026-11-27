@@ -61,7 +61,7 @@ flowchart LR
 | Durable Objects | 방 하나가 객체 하나입니다. 질문, 추천, 초안을 SQLite에 저장하고 WebSocket(hibernation)으로 전달합니다 |
 | AI Search       | 방마다 인스턴스 하나(`anyq-<방코드>`)를 만들어 자료를 보관, 색인, 검색합니다                          |
 | Workers AI      | 검색된 자료로 답변 초안을 쓰고(`@cf/openai/gpt-oss-120b`), 비슷한 질문을 묶고, 새 질문을 확인합니다   |
-| Turnstile       | 방을 만들기 전에 사람인지 확인합니다(선택)                                                            |
+| Turnstile       | 방을 만들 때와 처음 질문·추천할 때 사람인지 확인합니다(선택)                                          |
 
 ```
 src                 Astro. 랜딩은 미리 빌드하고, 방 화면은 요청 때 그린 뒤 Preact island가 맡습니다
@@ -98,7 +98,7 @@ pnpm run deploy --domain anyq.example.com
 
 ### Turnstile 켜기 (선택)
 
-`TURNSTILE_SECRET`이 없으면 사람 확인 없이 누구나 방을 만들 수 있습니다. 공개된 주소로 운영한다면 켜 두세요.
+`TURNSTILE_SECRET`이 없으면 사람 확인 없이 누구나 방을 만들고 질문·추천할 수 있습니다. 공개된 주소로 운영한다면 켜 두세요.
 
 1. [Turnstile 대시보드](https://dash.cloudflare.com/?to=/:account/turnstile)에서 위젯을 만들고 배포한 주소를 호스트 이름에 넣습니다. `sitekey`와 `secret`이 나옵니다.
 2. 둘 다 Worker의 비밀 값으로 넣습니다. 한 번 넣으면 다시 배포해도 유지됩니다.

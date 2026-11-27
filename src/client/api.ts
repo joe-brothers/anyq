@@ -29,6 +29,14 @@ export const api = {
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ token }),
 		}).then(json<CreatedRoom>),
+	join: async (id: string, voter: string, token: string) => {
+		const res = await fetch(API_BASE + "/rooms/" + id + "/join", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ token, voter }),
+		});
+		if (!res.ok) throw new ApiError(res.status);
+	},
 	room: (id: string, key: string | null) =>
 		fetch(API_BASE + "/rooms/" + id, { headers: bearer(key) }).then(json<RoomInfo>),
 	files: (id: string, key: string | null) =>

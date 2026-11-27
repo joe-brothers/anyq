@@ -11,7 +11,8 @@ import {
 	type ServerMsg,
 } from "@anyq/protocol";
 import { api } from "../client/api.ts";
-import { onLang, t } from "../client/ui.ts";
+import { loadTurnstile } from "../client/turnstile.ts";
+import { getLang, getTheme, onLang, t } from "../client/ui.ts";
 
 export type Role = "host" | "screen" | "audience";
 type Conn = { key: string; kind: "ok" | "ing" | "bad" };
@@ -71,7 +72,12 @@ let retry = 0;
 let pinger: ReturnType<typeof setInterval> | undefined;
 let stopped = false;
 
+/** 사람 확인이 끝나면 다시 보낼 질문·추천 */
+let held: ClientMsg | undefined;
+let verifying = false;
+
 export function send(m: ClientMsg) {
+	if (m.t === "ask" || m.t === "vote") held = m;
 	if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(m));
 	else conn.value = { key: "conn.nosend", kind: "bad" };
 }
@@ -140,7 +146,44 @@ function onMessage(m: ServerMsg) {
 				conn.value = { key: "conn.version", kind: "bad" };
 				notice.value = "msg.version";
 				ws?.close();
-			} else askErr.value = "err." + m.code;
+			} else if (m.code === "verify") void verify();
+			else askErr.value = "err." + m.code;
+	}
+}
+
+/** 서버가 사람 확인을 요구하면 Turnstile을 거친 뒤 하던 일을 다시 보낸다. */
+async function verify() {
+	const slot = document.getElementById("ts");
+	if (verifying || !slot) return;
+	verifying = true;
+	const done = (err: string | null = null) => {
+		verifying = false;
+		slot.replaceChildren();
+		askErr.value = err;
+	};
+	try {
+		const { sitekey } = await api.config();
+		await loadTurnstile();
+		window.turnstile!.render(slot, {
+			sitekey,
+			theme: getTheme(),
+			language: getLang(),
+			appearance: "interaction-only",
+			action: "join",
+			"refresh-expired": "never",
+			callback: async (token: string) => {
+				try {
+					await api.join(roomId, voter(), token);
+					done();
+					if (held) send(held);
+				} catch {
+					done("err.turnstile");
+				}
+			},
+			"error-callback": () => done("err.turnstile"),
+		});
+	} catch {
+		done("err.net");
 	}
 }
 
