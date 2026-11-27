@@ -23,6 +23,38 @@ Cloudflare Developer Day Seoul 2026 Use Case 공모전 출품작입니다.
 
 ## 구성
 
+```mermaid
+flowchart LR
+  subgraph B["브라우저"]
+    H["발표자<br>/r/방코드/host"]
+    A["청중<br>/r/방코드"]
+    S["프로젝터<br>/r/방코드/screen"]
+  end
+
+  subgraph CF["Cloudflare"]
+    subgraph W["Worker (anyq)"]
+      AS["Astro<br>화면"]
+      API["Hono<br>/api/v1"]
+    end
+    KV[("KV<br>Astro 세션")]
+    DO["Durable Object (Room)<br>방마다 하나<br>SQLite · WebSocket hibernation · alarm"]
+    AIS[("AI Search<br>방마다 인스턴스<br>자료 보관 · 색인 · 검색")]
+    WAI["Workers AI<br>gpt-oss-120b · bge-m3 · llama-guard-3-8b"]
+    T["Turnstile"]
+  end
+
+  B -->|"페이지"| AS
+  B <-->|"REST · WebSocket"| API
+  AS --- KV
+  API -->|"사람 확인"| T
+  API <-->|"방마다 라우팅"| DO
+  API -->|"자료 업로드"| AIS
+  DO -->|"질문 → 검색 + 답변 초안"| AIS
+  AIS -->|"초안 생성"| WAI
+  DO -->|"비슷한 질문 묶기 · 새 질문 확인"| WAI
+  DO -.->|"alarm: 색인 확인, 7일 뒤 삭제"| AIS
+```
+
 | 제품            | 하는 일                                                                                               |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
 | Workers         | Worker 하나(`anyq`)가 화면과 API를 함께 냅니다                                                        |
